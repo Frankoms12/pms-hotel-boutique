@@ -18,5 +18,6 @@ public class GuestAccount {
     protected GuestAccount() { }
     public GuestAccount(UUID id, String email, Instant now) { this.id=id; this.email=email; emailVerifiedAt=now; status=Status.ACTIVE; createdAt=now; updatedAt=now; }
     public UUID getId(){ return id; } public String getEmail(){ return email; } public boolean isActive(){ return status==Status.ACTIVE; }
+    public boolean isEmailVerified(){ return emailVerifiedAt != null; }
     public void recordLogin(Instant now) { lastLoginAt=now; updatedAt=now; }
 }

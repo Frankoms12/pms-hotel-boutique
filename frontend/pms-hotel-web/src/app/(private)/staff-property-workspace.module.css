@@ -1,0 +1,6 @@
+.views { display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:1.5rem; }
+.views button { min-height:44px; padding:.65rem 1rem; border:1px solid #d7dfd5; border-radius:12px; background:white; color:#2a362b; cursor:pointer; }
+.views button[aria-pressed="true"] { background:#5a6b5d; color:white; }
+.views button:focus-visible { outline:3px solid #6b7c62; outline-offset:3px; }
+.notice { background:white; border-radius:24px; padding:2rem; color:#2a362b; }
+.notice h1 { font-family:Georgia,serif; }

@@ -8,8 +8,7 @@ docker compose --env-file .env up -d --build
 ```
 
 levanta PostgreSQL, Backend y Web real con el catálogo poblado automáticamente.
-No es necesario crear Property, tipos o habitaciones mediante CRUD. Mantiene la
-configuración existente de Staff Auth, Google, BFF y cookies. No cambiar ni
+No es necesario crear Property, tipos o habitaciones mediante CRUD. Incluye credenciales locales Staff/Guest y conserva Google, BFF y cookies. No cambiar ni
 publicar `.env`; usar los requisitos de configuración Auth ya documentados.
 
 ## Datos de esta versión
@@ -181,3 +180,27 @@ GuestProfile asociado; no se afirma que Google entregue nombres sin ese perfil.
 PaymentGateway simulado Backend, persistencia Reservation/ReservationStay,
 confirmationCode e idempotencia booking. No se crea ni simula una reserva final.
 Este registro sustituye EN_QA previo y conserva su evidencia histórica.
+
+## Credenciales DEMO — AUTH-UNIFIED-01
+
+Exclusivamente desarrollo/demo, sin secretos productivos:
+
+| Contexto | Correo electrónico | Contraseña sintética local | Destino |
+| --- | --- | --- | --- |
+| Staff RECEPCION | staff.demo@example.test | PmsDemoLocal2026! | /dashboard |
+| Guest | guest.demo@example.test | PmsDemoLocal2026! | /cuenta |
+
+`DemoDataBootstrap` inserta una StaffUser con membership RECEPCION y scope de la
+Property demo; mantiene username interno `pms_demo_reception` solo para display/audit.
+GuestAccount separado, con guest_password_credentials (solo hash BCrypt(12)).
+No GuestProfile ni identidad Google ficticia. Ambas cuentas usan IDs demo estables;
+reiniciar conserva ID/hash/estado/memberships existentes y no resetea contraseñas.
+Conflictos de email/ID/rol fallan sin sobrescribir cuentas. Bootstrap SUPER_ADMIN
+opt-in previo es independiente y conserva sus datos; su login ahora usa work_email.
+
+Se aplican las mismas condiciones perfil dev/demo + flag y exclusión prod/production.
+Deshabilitar demo no crea nuevas cuentas/credenciales ni borra las anteriores.
+Google real autentica una identidad externa independiente; no asignar contraseñas
+por coincidencia de correo ni convertir Guest a Staff.
+Registro público y recuperación/cambio de contraseña/MFA siguen fuera de alcance;
+solo cuentas Guest previamente provisionadas con credential admiten password login.

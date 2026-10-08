@@ -9,23 +9,26 @@ export type ReservationStatus =
 export type ReservationFinanceState = "PAID" | "BALANCE" | "DEPOSIT" | "NO_CAPTURE" | "ESTIMATED";
 
 export interface ReservationFinancialSummary {
-  totalAmount: number;
-  /** Null cuando no existe captura (NO_CAPTURE) o aún no hay guarante monto (ESTIMATED). */
+  totalAmount: number | null;
+  /** Null cuando el contrato no proporciona evidencia de captura; no inferir desde APPROVED. */
   paidAmount: number | null;
-  financeState: ReservationFinanceState;
+  financeState: ReservationFinanceState | null;
 }
 
 export interface ReservationListItem {
+  stayRooms?: Array<{ roomType: string; room: string | null }>;
+  confirmationCode?: string;
+  readOnly?: boolean;
   id: string;
   propertyId: string;
-  guestName: string;
-  sourceLabel: string;
+  guestName: string | null;
+  sourceLabel: string | null;
   sourceReference: string | null;
   roomLabel: string | null;
-  stayStart: Date;
-  stayEnd: Date;
-  nights: number;
-  adults: number;
+  stayStart: Date | null;
+  stayEnd: Date | null;
+  nights: number | null;
+  adults: number | null;
   roomCount: number | null;
   currency: string;
   finance: ReservationFinancialSummary;
@@ -53,7 +56,8 @@ export interface ReservationCenterSummary {
 }
 
 export interface ReservationCenterData {
-  summary: ReservationCenterSummary;
+  readOnly?: boolean;
+  summary: ReservationCenterSummary | null;
   alerts: ReservationAlertItem[];
   reservations: ReservationListItem[];
 }

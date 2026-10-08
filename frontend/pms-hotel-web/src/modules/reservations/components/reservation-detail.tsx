@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import Link from 'next/link';
 
 import { HttpNetworkError } from "@/lib/http/errors";
 import { RoomMove, StayExtension } from "@/modules/stays";
@@ -10,6 +11,7 @@ import type { ReservationDetailData, ReservationStayDetail, StayTravelState } fr
 import type { ReservationStatus } from "../model/reservation-summary";
 import { ReservationCancellation } from "./reservation-cancellation";
 import { ReservationNoShow } from "./reservation-no-show";
+import { RoomAssignment } from './room-assignment';
 
 import styles from "./reservation-detail.module.css";
 
@@ -39,7 +41,8 @@ const TRAVEL_STATE_LABELS: Record<StayTravelState, string> = {
   NO_SHOW: "No-show",
 };
 
-function formatMoney(amount: number, currency: string): string {
+function formatMoney(amount: number | null, currency: string): string {
+  if (amount === null) return "—";
   const symbol = currency.toUpperCase() === "GTQ" ? "Q" : currency;
   return `${symbol}${amount.toLocaleString("en-US")}`;
 }
@@ -58,6 +61,7 @@ function pluralize(count: number, singular: string, plural: string): string {
 
 function occupancyLabel(detail: ReservationDetailData): string {
   const { guest } = detail;
+  if (guest.adults === null) return "No disponible";
   const base = pluralize(guest.adults, "adulto", "adultos");
 
   if (guest.children === null) {
@@ -71,12 +75,13 @@ function paymentLine(detail: ReservationDetailData): string {
   const { currency, finance } = detail;
 
   switch (finance.financeState) {
+    case null: return "No disponible";
     case "ESTIMATED":
       return `Tarifa estimada ${formatMoney(finance.totalAmount, currency)}`;
     case "PAID":
       return "Pagado";
     case "BALANCE": {
-      const pending = finance.paidAmount === null ? 0 : Math.max(finance.totalAmount - finance.paidAmount, 0);
+      const pending = finance.paidAmount === null ? 0 : Math.max((finance.totalAmount ?? 0) - finance.paidAmount, 0);
       return `Pendiente ${formatMoney(pending, currency)}`;
     }
     case "DEPOSIT":
@@ -90,20 +95,23 @@ const ACTIVE_TRAVEL_STATES: ReadonlySet<StayTravelState> = new Set(["RESERVED", 
 
 function StayBlock({
   stay,
-  singleRoom,
   onRoomMove,
   onExtend,
-}: Readonly<{ stay: ReservationStayDetail; singleRoom: boolean; onRoomMove?: () => void; onExtend?: () => void }>) {
-  const moveable = onRoomMove !== undefined && ACTIVE_TRAVEL_STATES.has(stay.travelState);
+  onAssign,
+}: Readonly<{ stay: ReservationStayDetail; singleRoom: boolean; onRoomMove?: () => void; onExtend?: () => void; onAssign?: () => void }>) {
+  const moveable = stay.roomId !== null && onRoomMove !== undefined && ACTIVE_TRAVEL_STATES.has(stay.travelState);
   const extensible = onExtend !== undefined && ACTIVE_TRAVEL_STATES.has(stay.travelState);
 
   return (
-    <div className={styles.stayItem}>
-      <p className={styles.stayRoom}>{stay.roomLabel} · {stay.roomType}</p>
+    <div className={styles.stayItem} role="group" aria-label={`Estadía ${stay.id}`}>
+      <p className={styles.stayRoom}>{stay.roomLabel ?? 'Sin asignar'} · {stay.roomType}</p>
       <p className={styles.stayMeta}>
         {formatShortDate(stay.checkIn)} → {formatShortDate(stay.checkOut)} · {pluralize(stay.nights, "noche", "noches")}
       </p>
-      {!singleRoom ? <p className={styles.stayMeta}>{TRAVEL_STATE_LABELS[stay.travelState]}</p> : null}
+      <p className={styles.stayMeta}>Estado de la estadía: <span>{TRAVEL_STATE_LABELS[stay.travelState]}</span></p>
+      <div className={styles.stayActions}>
+      {stay.roomId === null && stay.travelState === 'RESERVED' && onAssign
+        ? <button className={styles.assignAction} type="button" onClick={onAssign}>Asignar habitación</button> : null}
       {moveable ? (
         <button className={styles.stayAction} type="button" onClick={onRoomMove}>
           Cambiar habitación
@@ -114,6 +122,7 @@ function StayBlock({
           Extender estadía
         </button>
       ) : null}
+      </div>
     </div>
   );
 }
@@ -124,14 +133,19 @@ interface ReservationDetailProps {
   /** Must be supplied only after Backend approves the provisional Reservation Detail contract. */
   endpoint?: string;
   reservationId?: string;
+  sessionId?: string;
+  canManage?: boolean;
 }
 
-export function ReservationDetail({ propertyId, endpoint, reservationId }: Readonly<ReservationDetailProps>) {
+export function ReservationDetail({ propertyId, endpoint, reservationId, sessionId, canManage = false }: Readonly<ReservationDetailProps>) {
   const { data: detail, error, isLoading, refetch } = useReservationDetail(propertyId, endpoint, reservationId);
   const [cancelling, setCancelling] = useState(false);
   const [markingNoShow, setMarkingNoShow] = useState(false);
   const [movingRoom, setMovingRoom] = useState<string | null>(null);
   const [extending, setExtending] = useState<string | null>(null);
+  const [assigning, setAssigning] = useState<string | null>(null);
+  const [assignmentMessage, setAssignmentMessage] = useState('');
+  const heading = useRef<HTMLHeadingElement>(null);
 
   const title = reservationId ? `Reserva ${reservationId}` : "Detalle de reserva";
 
@@ -171,18 +185,19 @@ export function ReservationDetail({ propertyId, endpoint, reservationId }: Reado
 
   const singleRoom = detail.stays.length === 1;
   const reference = detail.source.reference ? ` · ${detail.source.reference}` : "";
-  const cancellable = detail.status === "CONFIRMED" || detail.status === "PENDING";
-  const noShowPending = detail.status === "NO_SHOW_PENDING";
+  const cancellable = !detail.readOnly && (detail.status === "CONFIRMED" || detail.status === "PENDING");
+  const noShowPending = !detail.readOnly && detail.status === "NO_SHOW_PENDING";
 
   return (
     <div className={styles.page}>
+      <Link className={styles.stayAction} href="/reservas">← Volver a reservas</Link>
       <header className={styles.header}>
         <div className={styles.titleBlock}>
-          <h1>{title}</h1>
+          <h1 ref={heading} tabIndex={-1}>{detail.confirmationCode ? `Reserva ${detail.confirmationCode}` : title}</h1>
           <p className={styles.subtitle}>
             <span className={`${styles.badge} ${STATUS_BADGE[detail.status]}`}>{STATUS_LABELS[detail.status]}</span>
           </p>
-          <p className={styles.origin}>Origen: {detail.source.label}{reference} · Creada {formatLongDate(detail.createdAt)}</p>
+          <p className={styles.origin}>Origen: {detail.source.label ?? "No registrado"}{reference} · Creada {formatLongDate(detail.createdAt)}</p>
           {cancellable ? (
             <button
               className={styles.cancelAction}
@@ -205,6 +220,11 @@ export function ReservationDetail({ propertyId, endpoint, reservationId }: Reado
           ) : null}
         </div>
       </header>
+      {assignmentMessage && <p className={styles.assignmentNotice} role="status">{assignmentMessage}</p>}
+      {assigning && sessionId && canManage && <RoomAssignment key={assigning} propertyId={propertyId} reservationId={reservationId}
+        stayId={assigning} sessionId={sessionId} allowed={canManage} onClose={() => setAssigning(null)}
+        onAssigned={result => { setAssigning(null); setAssignmentMessage(`Habitación ${result.roomNumber} asignada a la estadía. Estado y tarifa conservados.`);
+          queueMicrotask(() => heading.current?.focus()); }} />}
 
       {cancelling && propertyId && endpoint && reservationId ? (
         <ReservationCancellation
@@ -250,6 +270,7 @@ export function ReservationDetail({ propertyId, endpoint, reservationId }: Reado
         <section className={styles.card} aria-labelledby="reservation-data-title">
           <h2 id="reservation-data-title">Datos de la reserva</h2>
           <dl className={styles.definitionList}>
+            {detail.readOnly && <div className={styles.definitionRow}><dt>ID de reserva</dt><dd>{detail.id}</dd></div>}
             {singleRoom && (
               <>
                 <div className={styles.definitionRow}>
@@ -265,16 +286,19 @@ export function ReservationDetail({ propertyId, endpoint, reservationId }: Reado
             <div className={styles.definitionRow}>
               <dt>{singleRoom ? "Habitación" : "Habitaciones"}</dt>
               <dd>
-                <StayBlock stay={detail.stays[0]} singleRoom={singleRoom} onRoomMove={() => setMovingRoom(detail.stays[0].id)} onExtend={() => setExtending(detail.stays[0].id)} />
+                {detail.stays.length === 0 ? <p>Sin estadías registradas.</p> : <StayBlock stay={detail.stays[0]} singleRoom={singleRoom} onRoomMove={detail.readOnly ? undefined : () => setMovingRoom(detail.stays[0].id)} onExtend={detail.readOnly ? undefined : () => setExtending(detail.stays[0].id)}
+                  onAssign={canManage && sessionId && cancellable ? () => setAssigning(detail.stays[0].id) : undefined} />}
                 {detail.stays.slice(1).map((stay) => (
-                  <StayBlock key={stay.id} stay={stay} singleRoom={false} onRoomMove={() => setMovingRoom(stay.id)} onExtend={() => setExtending(stay.id)} />
+                  <StayBlock key={stay.id} stay={stay} singleRoom={false} onRoomMove={detail.readOnly ? undefined : () => setMovingRoom(stay.id)} onExtend={detail.readOnly ? undefined : () => setExtending(stay.id)}
+                    onAssign={canManage && sessionId && cancellable ? () => setAssigning(stay.id) : undefined} />
                 ))}
               </dd>
             </div>
             <div className={styles.definitionRow}>
-              <dt>Huésped principal</dt>
-              <dd>{detail.guest.primaryName}</dd>
+              <dt>{detail.readOnly ? "Responsable de la reserva" : "Huésped principal"}</dt>
+              <dd>{detail.guest.primaryName ?? "No registrado"}</dd>
             </div>
+            {!detail.readOnly && <>
             <div className={styles.definitionRow}>
               <dt>Huéspedes</dt>
               <dd>{occupancyLabel(detail)}</dd>
@@ -295,10 +319,11 @@ export function ReservationDetail({ propertyId, endpoint, reservationId }: Reado
               <dt>Notas / solicitudes especiales</dt>
               <dd>{detail.notes ?? "—"}</dd>
             </div>
+            </>}
           </dl>
         </section>
 
-        <section className={styles.card} aria-labelledby="reservation-finance-title">
+        {!detail.readOnly && <section className={styles.card} aria-labelledby="reservation-finance-title">
           <h2 id="reservation-finance-title">Resumen financiero</h2>
           <ul className={styles.financeLines}>
             {detail.finance.lines.map((line, index) => (
@@ -314,7 +339,7 @@ export function ReservationDetail({ propertyId, endpoint, reservationId }: Reado
           </p>
           <p className={styles.paymentLine}>{paymentLine(detail)}</p>
           <p className={styles.folioHint}>El folio completo se consulta vía el módulo Folio (API pública).</p>
-        </section>
+        </section>}
       </div>
     </div>
   );

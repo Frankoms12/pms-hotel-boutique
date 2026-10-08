@@ -49,19 +49,57 @@ beforeEach(async () => {
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe("Browser session routes target explicit Backend authentication", () => {
+  it("accepts exact 50 Staff credentials, with email normalized and password intact", async () => {
+    fetchBackend.mockResolvedValue(Response.json(tokens, { status: 201 }));
+    const email = 'a'.repeat(37) + '@example.test', password = ' ' + 'X!'.repeat(24) + ' ';
+    const response = await staff.POST(request('staff/session', 'POST', undefined, JSON.stringify({email:' '+email.toUpperCase()+' ',password})));
+    expect(response.status).toBe(201);
+    expect(JSON.parse(fetchBackend.mock.calls[0][1]?.body as string)).toEqual({email,password});
+  });
+
+  it.each([
+    {email:'a'.repeat(38)+'@example.test',password:'x'},
+    {email:'valid@example.test',password:'x'.repeat(51)},
+    {email:'bad-email',password:'x'}, {email:'',password:'x'}, {email:'valid@example.test',password:''},
+  ])("rejects invalid Staff input case %# before Backend", async body => {
+    expect((await staff.POST(request('staff/session','POST',undefined,JSON.stringify(body)))).status).toBe(400);
+    expect(fetchBackend).not.toHaveBeenCalled();
+  });
+  it.each([500, 503])("does not disguise Backend %s as a Staff 401 or rotate cookies", async status => {
+    fetchBackend.mockResolvedValue(new Response(null, { status }));
+    const session = await staff.GET(request("staff/session", "GET", "pms_staff_access=synthetic-access"));
+    const refresh = await staffRefresh.POST(request("staff/refresh", "POST", "pms_staff_refresh=synthetic-refresh"));
+    for (const response of [session, refresh]) {
+      expect(response.status).toBe(503);
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      expect(response.cookies.getAll()).toEqual([]);
+    }
+  });
+
+  it("never caches Staff session/refresh success or authoritative unauthenticated responses", async () => {
+    fetchBackend.mockResolvedValue(Response.json(tokens));
+    const responses = [
+      await staff.GET(request("staff/session", "GET", "pms_staff_access=synthetic-access")),
+      await staff.GET(request("staff/session")),
+      await staffRefresh.POST(request("staff/refresh", "POST", "pms_staff_refresh=synthetic-refresh")),
+      await staffRefresh.POST(request("staff/refresh", "POST")),
+    ];
+    responses.forEach(response => expect(response.headers.get("cache-control")).toBe("no-store"));
+  });
+
   it("keeps POST Staff session public while calling POST login once and keeping tokens in cookies", async () => {
     fetchBackend.mockResolvedValue(Response.json(tokens, { status: 201 }));
-    const response = await staff.POST(request("staff/session", "POST", undefined, JSON.stringify({ username: " test-staff ", password: "synthetic-password" })));
+    const response = await staff.POST(request("staff/session", "POST", undefined, JSON.stringify({ email: " TEST-STAFF@example.test ", password: "synthetic-password" })));
     expect(fetchBackend).toHaveBeenCalledExactlyOnceWith(`${backend}/api/v1/staff-auth/login`, {
       method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ username: "test-staff", password: "synthetic-password" }), cache: "no-store",
+      body: JSON.stringify({ email: "test-staff@example.test", password: "synthetic-password" }), cache: "no-store",
     });
     expect(response.status).toBe(201);
     expect(await response.json()).toEqual({ authenticated: true });
     assertTokenCookies(response, "staff");
   });
 
-  it.each(["{", "{}", '{"username":"","password":""}'])("preserves 400 input rejection without calling login (%s)", async body => {
+  it.each(["{", "{}", '{"email":"","password":""}'])("preserves 400 input rejection without calling login (%s)", async body => {
     expect((await staff.POST(request("staff/session", "POST", undefined, body))).status).toBe(400);
     expect(fetchBackend).not.toHaveBeenCalled();
   });
@@ -69,10 +107,10 @@ describe("Browser session routes target explicit Backend authentication", () => 
   it.each(["rejected", "unavailable", "incomplete"])("preserves login failure semantics for %s", async outcome => {
     if (outcome === "unavailable") fetchBackend.mockRejectedValue(new Error("synthetic-network-error"));
     else fetchBackend.mockResolvedValue(Response.json(outcome === "incomplete" ? {} : { error: "denied" }, { status: outcome === "rejected" ? 401 : 201 }));
-    const response = await staff.POST(request("staff/session", "POST", undefined, '{"username":"test-staff","password":"synthetic-password"}'));
+    const response = await staff.POST(request("staff/session", "POST", undefined, '{"email":"test-staff@example.test","password":"synthetic-password"}'));
     expect(response.status).toBe(outcome === "rejected" ? 401 : 503);
     expect(response.cookies.getAll()).toEqual([]);
-    expect(await response.json()).toEqual({ error: outcome === "rejected" ? "Invalid Staff credentials" : "Staff authentication is unavailable" });
+    expect(await response.json()).toEqual({ error: outcome === "rejected" ? "Invalid credentials" : "Staff authentication is unavailable" });
   });
 
   describe.each(["staff", "guest"] as const)("%s remains isolated", context => {
@@ -121,8 +159,9 @@ describe("Browser session routes target explicit Backend authentication", () => 
       if (outcome === "rejected") fetchBackend.mockResolvedValue(new Response(null, { status: 401 }));
       const cookie = outcome === "missing" ? undefined : outcome === "foreign" ? `pms_${context === "staff" ? "guest" : "staff"}_access=foreign` : `pms_${context}_access=synthetic-access`;
       const response = await (context === "staff" ? staff : guest).DELETE(request(`${context}/session`, "DELETE", cookie));
-      expect(response.status).toBe(204);
-      assertClearedCookies(response, context);
+      if(context==='guest' && outcome==='unavailable'){
+        expect(response.status).toBe(503);expect(response.cookies.getAll()).toEqual([]);
+      }else{expect(response.status).toBe(204);assertClearedCookies(response,context);}
       if (outcome === "missing" || outcome === "foreign") expect(fetchBackend).not.toHaveBeenCalled();
     });
 

@@ -21,3 +21,9 @@ databaseChangeLog:
   - include:
       file: 007-reservation-link-otp.yaml
       relativeToChangelogFile: true
+  - include:
+      file: 008-public-booking-receipts.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: 009-verified-email-history.yaml
+      relativeToChangelogFile: true

@@ -11,7 +11,7 @@ public class StaffAuthExceptionHandler {
     @ExceptionHandler(StaffAuthenticationException.class)
     ProblemDetail invalidCredentials(StaffAuthenticationException exception) {
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNAUTHORIZED);
-        problem.setTitle("Staff authentication failed");
+        problem.setTitle("Invalid credentials");
         return problem;
     }
 }

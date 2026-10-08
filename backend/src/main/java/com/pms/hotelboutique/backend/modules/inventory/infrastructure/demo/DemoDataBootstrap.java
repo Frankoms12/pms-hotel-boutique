@@ -30,8 +30,12 @@ public class DemoDataBootstrap implements ApplicationRunner {
             new Type("DLX", "Habitación Deluxe", 5), new Type("SUITE", "Suite", 6));
     private final JdbcTemplate jdbc;
     private final DemoRatePolicy rates;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwords;
+    public static final String STAFF_EMAIL = "staff.demo@example.test";
+    public static final String GUEST_EMAIL = "guest.demo@example.test";
+    public static final String DEMO_PASSWORD = "PmsDemoLocal2026!";
 
-    public DemoDataBootstrap(JdbcTemplate jdbc, DemoRatePolicy rates) { this.jdbc = jdbc; this.rates = rates; }
+    public DemoDataBootstrap(JdbcTemplate jdbc, DemoRatePolicy rates, org.springframework.security.crypto.password.PasswordEncoder passwords) { this.jdbc = jdbc; this.rates = rates; this.passwords = passwords; }
 
     @Override
     @Transactional
@@ -68,7 +72,37 @@ public class DemoDataBootstrap implements ApplicationRunner {
                 if (correct == null || correct != 1) throw new IllegalStateException("DEMO_DATA_ROOM_CONFLICT: " + code + "; no data overwritten");
             }
         }
+        bootstrapCredentials(organization);
         log.info("Local demo dataset ready: Property HB-GT-DEMO, 6 RoomTypes, 24 Rooms; existing data preserved");
+    }
+
+    private void bootstrapCredentials(UUID organization) {
+        UUID staff = id("staff:email-password");
+        jdbc.update("""
+                INSERT INTO staff_users(id,username,work_email,password_hash,role_code,status,created_at,updated_at)
+                VALUES(?,'pms_demo_reception',?,?,'RECEPCION','ACTIVE',now(),now()) ON CONFLICT DO NOTHING
+                """, staff, STAFF_EMAIL, passwords.encode(DEMO_PASSWORD));
+        Integer expectedStaff = jdbc.queryForObject("SELECT count(*) FROM staff_users WHERE id=? AND work_email=? AND username='pms_demo_reception' AND role_code='RECEPCION'", Integer.class, staff, STAFF_EMAIL);
+        if (expectedStaff == null || expectedStaff != 1) throw new IllegalStateException("DEMO_AUTH_STAFF_CONFLICT: existing account preserved");
+        jdbc.update("""
+                INSERT INTO organization_memberships(staff_user_id,organization_id,role_code,status,created_at,updated_at)
+                VALUES(?,?,'RECEPCION','ACTIVE',now(),now()) ON CONFLICT DO NOTHING
+                """, staff, organization);
+        jdbc.update("""
+                INSERT INTO membership_properties(staff_user_id,organization_id,property_id,status,created_at,updated_at)
+                VALUES(?,?,?,'ACTIVE',now(),now()) ON CONFLICT DO NOTHING
+                """, staff, organization, PROPERTY_ID);
+        UUID guest = id("guest:email-password");
+        jdbc.update("""
+                INSERT INTO guest_accounts(id,email,email_verified_at,status,created_at,updated_at)
+                VALUES(?,?,now(),'ACTIVE',now(),now()) ON CONFLICT DO NOTHING
+                """, guest, GUEST_EMAIL);
+        Integer expectedGuest = jdbc.queryForObject("SELECT count(*) FROM guest_accounts WHERE id=? AND email=?", Integer.class, guest, GUEST_EMAIL);
+        if (expectedGuest == null || expectedGuest != 1) throw new IllegalStateException("DEMO_AUTH_GUEST_CONFLICT: existing account preserved");
+        jdbc.update("""
+                INSERT INTO guest_password_credentials(guest_account_id,password_hash,created_at,updated_at)
+                VALUES(?,?,now(),now()) ON CONFLICT DO NOTHING
+                """, guest, passwords.encode(DEMO_PASSWORD));
     }
 
     private static UUID id(String key) { return UUID.nameUUIDFromBytes(("pms:local-demo:" + key).getBytes(StandardCharsets.UTF_8)); }

@@ -1,5 +1,14 @@
 # 08 — Contrato de identidad y sesión Staff (BE-002)
 
+**Actualización aprobada AUTH-UNIFIED-01 (2026-10-06):**
+[Contrato vigente](44_UNIFIED_LOGIN_CONTRACT_QA.md): login tradicional universal correo electrónico + contraseña;
+Guest/Staff separados, Google solo Guest e invitado público. Guest password solo
+para cuentas con credential existente; sin registro/recuperación/cambio/MFA.
+`/acceso` tiene un formulario único en http://localhost:3001. Las decisiones y
+pruebas de simulación/registro anteriores se conservan como contexto histórico;
+no representan el login vigente. UI/BFF nunca exponen JWT al JavaScript.
+
+
 **Estado:** APROBADO — C1 autoriza BE-002 Staff. Guest Google se implementa en BE-004.
 
 **Fecha:** 2026-09-29
@@ -104,17 +113,19 @@ y auditoría.
 `POST /api/v1/staff-auth/sessions`
 
 ```json
-{ "username": "staff-login", "password": "provided-only-to-bff" }
+{ "email": "staff@example.test", "password": "provided-only-to-bff" }
 ```
 
 - Solo acepta una identidad Staff previamente provisionada por el hotel. No
   existe endpoint público de registro Staff.
-- `username` es el identificador único creado por el hotel. Cada StaffUser,
+- `email` es el correo laboral de login, normalizado trim/lowercase, máximo 50.
+  `username` se conserva como identificador interno creado por el hotel. Cada StaffUser,
   incluido `SUPER_ADMIN`, registra también un correo laboral único de contacto,
   separado del username. La contraseña se recibe solo por el BFF y se almacena
-  exclusivamente como hash adaptativo.
+  exclusivamente como hash adaptativo. Password required/NotBlank, máximo 50 caracteres,
+  sin trim/lowercase/normalización ni reglas de complejidad nuevas de login.
 - El Backend valida el hash de contraseña y que la identidad esté activa; en
-  cualquier otro caso devuelve `401 INVALID_CREDENTIALS` sin revelar si el
+  cualquier otro caso devuelve `401` con ProblemDetail genérico (`title=Invalid credentials`) sin revelar si el
   identificador existe. Si una política MFA futura lo exige, responde un desafío
   explícito; no acepta una semilla ni código MFA en esta primera versión sin
   contrato adicional.

@@ -1,6 +1,9 @@
 "use client";
+import { mapStaffReservationCenter } from "../mappers/staff-reservation.mapper";
+import { listStaffReservations, staffReservationsEndpoint } from "../service/staff-reservation-read.service";
 
 import { useQuery } from "@tanstack/react-query";
+import { DomainMappingError } from '@/lib/errors';
 
 import { mapReservationCenter } from "../mappers/reservation-list.mapper";
 import { listReservationCenter } from "../service/reservation.service";
@@ -14,8 +17,11 @@ export function useReservationCenter(propertyId: string | undefined, endpoint: s
         throw new Error("RESERVATION_QUERY_CONFIGURATION_REQUIRED");
       }
 
-      const response = await listReservationCenter({ endpoint, propertyId, signal });
-      return mapReservationCenter(response);
+      const result = endpoint === staffReservationsEndpoint
+        ? mapStaffReservationCenter(await listStaffReservations(propertyId, signal))
+        : mapReservationCenter(await listReservationCenter({ endpoint, propertyId, signal }));
+      if (result.reservations.some(item => item.propertyId !== propertyId)) throw new DomainMappingError('RESERVATION_PROPERTY_MISMATCH');
+      return result;
     },
   });
 }

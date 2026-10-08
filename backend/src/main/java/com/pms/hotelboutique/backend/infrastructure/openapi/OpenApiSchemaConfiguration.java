@@ -20,8 +20,11 @@ public class OpenApiSchemaConfiguration {
     OpenApiCustomizer existingValidationMetadata() {
         return api -> {
             var schemas = api.getComponents().getSchemas();
-            for (Class<?> dto : List.of(StaffLoginRequest.class, GoogleExchangeRequest.class,
-                    ReservationLinkController.ChallengeRequest.class, CreatePropertyRequest.class,
+            for (Class<?> dto : List.of(com.pms.hotelboutique.backend.modules.guestauth.api.GuestLoginRequest.class,
+                    com.pms.hotelboutique.backend.modules.securityauth.api.UnifiedLoginRequest.class, StaffLoginRequest.class, GoogleExchangeRequest.class,
+                    ReservationLinkController.ChallengeRequest.class,
+                    com.pms.hotelboutique.backend.modules.guestauth.api.GuestRegistrationController.RegistrationRequest.class,
+                    com.pms.hotelboutique.backend.modules.guestauth.api.GuestRegistrationController.RegistrationVerifyRequest.class, CreatePropertyRequest.class,
                     CreateRoomTypeRequest.class, CreateRoomRequest.class, PatchRoomRequest.class,
                     CreateRatePlanRequest.class, CatalogPriceRequest.class, PatchPropertyRequest.class,
                     PatchRoomTypeRequest.class, PatchRatePlanRequest.class)) {

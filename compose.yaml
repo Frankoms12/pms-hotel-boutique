@@ -31,13 +31,17 @@ services:
       PMS_BOOTSTRAP_ADMIN_PASSWORD: ${PMS_BOOTSTRAP_ADMIN_PASSWORD:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}
+      GOOGLE_REDIRECT_URI: http://localhost:3001/api/auth/guest/google/callback
+      PMS_EMAIL_PROVIDER: ${PMS_EMAIL_PROVIDER:-resend}
+      PMS_SMTP_HOST: ${PMS_SMTP_HOST:-}
+      PMS_SMTP_PORT: ${PMS_SMTP_PORT:-}
+      PMS_SMTP_USERNAME: ${PMS_SMTP_USERNAME:-}
+      PMS_SMTP_APP_PASSWORD: ${PMS_SMTP_APP_PASSWORD:-}
+      PMS_SMTP_FROM: ${PMS_SMTP_FROM:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-}
     expose:
       - "8080"
-    ports:
-      - "127.0.0.1:${PMS_BACKEND_PORT:-8081}:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,9 +63,9 @@ services:
       HOSTNAME: 0.0.0.0
       PORT: "3000"
       PMS_BACKEND_INTERNAL_URL: http://backend:8080
-      PMS_WEB_PUBLIC_URL: ${PMS_WEB_PUBLIC_URL:-http://localhost:${PMS_WEB_PORT:-3000}}
+      PMS_WEB_PUBLIC_URL: http://localhost:3001
     ports:
-      - "${PMS_WEB_PORT:-3000}:3000"
+      - "127.0.0.1:3001:3000"
     depends_on:
       backend:
         condition: service_healthy

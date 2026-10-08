@@ -11,9 +11,9 @@ export type StayTravelStateDto = "RESERVED" | "IN_HOUSE" | "CHECKED_OUT" | "CANC
 /** Una ReservationStay dentro de la Reservation. Multi-room => varias entradas. */
 export interface ReservationStayDetailDto {
   stay_id: string;
-  room_id: string;
+  room_id: string | null;
   /** Etiqueta de habitación, ej. "203". */
-  room_label: string;
+  room_label: string | null;
   /** Tipo de habitación, ej. "Deluxe King". */
   room_type: string;
   /** Fechas ISO "YYYY-MM-DD". */

@@ -33,7 +33,7 @@ Actualización 2026-10-05: [la entrega de revisión](41_PUBLIC_BOOKING_SELECTION
 
 Pruebas de componentes y dominio cubren galería/teclado/imagen fallida, retorno con criterios, cuota y desglose, selección y cambio de tarifa, moneda compartida, búsqueda incompleta, RoomType o tarifa no disponible, metadata opcional ausente y recuperación de error/offline. Se mantienen las validaciones previas del mapper y del catálogo.
 
-QA en Chrome sobre `http://localhost:3000`: Inicio → detalle → catálogo; fotografías cargadas, miniaturas y flechas; toast y retorno del foco; tarjeta sticky; carrito compartido; política no reembolsable; footer accesible; sin desbordamiento horizontal a 320, 390, 768, 1024 y 1440 px. Se comprueban lint, TypeScript estricto, pruebas afectadas y build antes de publicar.
+QA en Chrome sobre `http://localhost:3001`: Inicio → detalle → catálogo; fotografías cargadas, miniaturas y flechas; toast y retorno del foco; tarjeta sticky; carrito compartido; política no reembolsable; footer accesible; sin desbordamiento horizontal a 320, 390, 768, 1024 y 1440 px. Se comprueban lint, TypeScript estricto, pruebas afectadas y build antes de publicar.
 
 ## Prueba manual
 

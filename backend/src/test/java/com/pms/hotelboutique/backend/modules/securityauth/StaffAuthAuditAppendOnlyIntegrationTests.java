@@ -163,7 +163,7 @@ class StaffAuthAuditAppendOnlyIntegrationTests {
                 migrate(schema, MASTER);
                 var upgradedManifest = manifest(connection, schema);
                 // Upgrade includes AUTH-01 append-only and AUTH-02 attribution columns.
-                assertEquals(previousManifest.size() + 2, upgradedManifest.size());
+                assertEquals(previousManifest.size() + 6, upgradedManifest.size());
                 previousManifest.forEach((key, checksum) -> assertEquals(checksum, upgradedManifest.get(key)));
                 assertEquals(manifest(connection, "public"), upgradedManifest);
                 assertEquals(before, auditRows(connection, schema));
@@ -201,7 +201,7 @@ class StaffAuthAuditAppendOnlyIntegrationTests {
                         property, organization, property.toString());
                 execute(connection, "INSERT INTO staff_users(id,username,work_email,password_hash,role_code,status,created_at,updated_at) "
                         + "VALUES (?,?,?,?,'GERENCIA','ACTIVE',now(),now())", staff, username,
-                        username + "@example.test", passwordEncoder.encode(password));
+                        username.substring(0, 37) + "@example.test", passwordEncoder.encode(password));
                 execute(connection, "INSERT INTO organization_memberships(staff_user_id,organization_id,role_code,status,created_at,updated_at) "
                         + "VALUES (?,?,'GERENCIA','ACTIVE',now(),now())", staff, organization);
                 execute(connection, "INSERT INTO membership_properties(staff_user_id,organization_id,property_id,status,created_at,updated_at) "
@@ -211,7 +211,7 @@ class StaffAuthAuditAppendOnlyIntegrationTests {
                 connection.rollback();
             }
         }
-        var login = auth.login(username, password);
+        var login = auth.login(username.substring(0, 37) + "@example.test", password);
         var principal = jwt.parse(login.accessToken());
         assertEquals(staff, auth.getActivePrincipal(principal).staffUserId());
         var rotated = auth.refresh(login.refreshToken());

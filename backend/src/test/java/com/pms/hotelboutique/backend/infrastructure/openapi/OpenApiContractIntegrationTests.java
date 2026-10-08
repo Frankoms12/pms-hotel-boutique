@@ -68,6 +68,22 @@ class OpenApiContractIntegrationTests {
                 + " tags=" + doc.path("tags").size());
     }
     @Test
+    void verifiedRegistrationHasExactSchemasAndBffBinding() throws Exception {
+        var doc=document();var schemas=doc.path("components").path("schemas");
+        var request=schemas.path("RegistrationRequest");
+        assertEquals(Set.of("email","password"),strings(request.path("required")));
+        assertEquals(50,request.path("properties").path("email").path("maxLength").asInt());
+        var password=request.path("properties").path("password");assertEquals(8,password.path("minLength").asInt());assertEquals(50,password.path("maxLength").asInt());assertTrue(password.path("writeOnly").asBoolean());
+        assertTrue(password.path("description").asText().contains("72 bytes UTF-8"));
+        assertFalse(request.path("additionalProperties").asBoolean());
+        var verify=operation(doc,"/api/v1/guest-auth/registrations/verify","post");assertSuccessSchema(verify,"201","GuestAuthResponse");
+        assertTrue(verify.path("security").get(0).has("guestRegistrationBinding"));
+        assertTrue(schemas.path("RegistrationVerifyRequest").path("properties").path("otp").path("writeOnly").asBoolean());
+        var register=operation(doc,"/api/v1/guest-auth/registrations","post");assertSuccessSchema(register,"202","RegistrationAccepted");
+        assertEquals(Set.of("requestId"),strings(schemas.path("RegistrationAccepted").path("required")));
+    }
+
+    @Test
     void guestAccountSummaryDocumentsOwnIdentityAndOptionalRealDataOnly() throws Exception {
         var doc = document();
         var op = operation(doc, "/api/v1/guest-auth/account/summary", "get");
@@ -112,16 +128,17 @@ class OpenApiContractIntegrationTests {
         doc.path("paths").properties().forEach(path -> path.getValue().properties().forEach(method -> {
             String route = path.getKey();
             var op = method.getValue();
-            boolean staffAuth = route.startsWith("/api/v1/staff-auth/");
+            boolean staffAuth = (route.startsWith("/api/v1/staff-auth/") || route.startsWith("/api/v1/auth/"));
             boolean guestAuth = route.startsWith("/api/v1/guest-auth/");
             boolean publicAvailability = route.equals("/api/v1/public/availability") && method.getKey().equals("get");
-            assertEquals(publicAvailability ? "public" : staffAuth || guestAuth ? "internal-bff" : "staff", op.path("x-audience").asText());
+            boolean publicBooking = route.equals("/api/v1/public/bookings") && method.getKey().equals("post");
+            assertEquals(publicAvailability || publicBooking ? "public" : staffAuth || guestAuth ? "internal-bff" : "staff", op.path("x-audience").asText());
             boolean anonymous = route.endsWith("/google/start") || route.endsWith("/google/exchange")
-                    || route.equals("/api/v1/staff-auth/sessions") || route.equals("/api/v1/staff-auth/login") || publicAvailability;
+                    || route.equals("/api/v1/auth/sessions") || route.equals("/api/v1/guest-auth/sessions") || route.equals("/api/v1/staff-auth/sessions") || route.equals("/api/v1/staff-auth/login") || route.equals("/api/v1/guest-auth/registrations") || publicAvailability || publicBooking;
             if (anonymous) assertTrue(op.path("security").isMissingNode() || op.path("security").isEmpty());
             else {
                 String scheme = route.endsWith("/refresh") ? (staffAuth ? "staffRefreshCookie" : "guestRefreshCookie")
-                        : guestAuth ? "guestBearerAuth" : "bearerAuth";
+                        : route.startsWith("/api/v1/guest-auth/registrations/") ? "guestRegistrationBinding" : guestAuth ? "guestBearerAuth" : "bearerAuth";
                 assertEquals(1, op.path("security").size());
                 assertTrue(op.path("security").get(0).has(scheme), route + " " + method.getKey());
             }
@@ -310,16 +327,42 @@ class OpenApiContractIntegrationTests {
     }
 
     @Test
+    void universalLoginDocumentsEmailPasswordsAndAnonymousBffTransport() throws Exception {
+        var doc = document();
+        for (String name : List.of("StaffLoginRequest", "GuestLoginRequest", "UnifiedLoginRequest")) {
+            var schema = doc.path("components").path("schemas").path(name);
+            assertEquals(Set.of("email", "password"), strings(schema.path("required")));
+            assertFalse(schema.path("properties").has("username"));
+            assertEquals("email", schema.path("properties").path("email").path("format").asText());
+            assertEquals(50, schema.path("properties").path("email").path("maxLength").asInt());
+            assertTrue(schema.path("properties").path("password").path("writeOnly").asBoolean());
+            assertEquals(50, schema.path("properties").path("password").path("maxLength").asInt());
+            assertEquals("password", schema.path("properties").path("password").path("format").asText());
+            assertEquals(1, schema.path("properties").path("password").path("minLength").asInt());
+        }
+        for (String route : List.of("/api/v1/auth/sessions", "/api/v1/guest-auth/sessions", "/api/v1/staff-auth/sessions")) {
+            var op = operation(doc, route, "post");
+            assertEquals("internal-bff", op.path("x-audience").asText());
+            assertTrue(op.path("security").isArray());
+            assertEquals(0, op.path("security").size());
+            for (String status : List.of("201", "400", "401")) assertTrue(op.path("responses").has(status));
+        }
+        assertEquals("guestPasswordLogin", operation(doc,"/api/v1/guest-auth/sessions","post").path("operationId").asText());
+        assertEquals("unifiedPasswordLogin", operation(doc,"/api/v1/auth/sessions","post").path("operationId").asText());
+        assertTrue(operation(doc,"/api/v1/auth/sessions","post").path("responses").has("200"));
+    }
+
+    @Test
     void dtoValidationNullabilityAndPrivacyAreFaithfulToWireContracts() throws Exception {
         var doc = document();
         var schemas = doc.path("components").path("schemas");
         assertFalse(schemas.has("StaffPrincipal") || schemas.has("GuestPrincipal") || schemas.has("StaffUser"));
         var login = schemas.path("StaffLoginRequest");
-        assertEquals(Set.of("username", "password"), strings(login.path("required")));
+        assertEquals(Set.of("email", "password"), strings(login.path("required")));
         var password = login.path("properties").path("password");
         assertTrue(password.path("writeOnly").asBoolean());
         assertEquals("password", password.path("format").asText());
-        assertEquals(256, password.path("maxLength").asInt());
+        assertEquals(50, password.path("maxLength").asInt());
         assertEquals(1, password.path("minLength").asInt());
         for (String name : List.of("StaffAuthResponse", "GuestAuthResponse")) {
             var tokens = schemas.path(name);
@@ -400,12 +443,40 @@ class OpenApiContractIntegrationTests {
     @Test
     void schemaAnnotationsDoNotAlterHttpAuthenticationOrValidation() throws Exception {
         mvc.perform(post("/api/v1/staff-auth/sessions").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"username\":\"\",\"password\":\"\"}")).andExpect(status().isBadRequest());
+                .content("{\"email\":\"\",\"password\":\"\"}")).andExpect(status().isBadRequest());
         mvc.perform(post("/api/v1/staff-auth/refresh")).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/v1/guest-auth/refresh")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/staff-auth/session")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/guest-auth/session")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/reports/on-books/daily")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void staffReservationsDocumentReadOnlyScopeAndNullableRealData() throws Exception {
+        var doc = document();
+        for (String route : List.of("/api/v1/reservations", "/api/v1/reservations/{reservationId}")) {
+            var op = operation(doc, route, "get");
+            assertEquals("staff", op.path("x-audience").asText());
+            assertTrue(op.path("security").get(0).has("bearerAuth"));
+            assertTrue(op.path("description").asText().contains("RESERVATION_MANAGE"));
+            assertTrue(parameter(op, "propertyId").path("required").asBoolean());
+            assertEquals("uuid", parameter(op, "propertyId").path("schema").path("format").asText());
+            for (String code : List.of("200", "400", "401", "403")) assertTrue(op.path("responses").has(code));
+            assertTrue(op.path("responses").path("200").path("headers").has("Cache-Control"));
+            assertFalse(doc.path("paths").path(route).has("post"));
+        }
+        assertSuccessSchema(operation(doc, "/api/v1/reservations/{reservationId}", "get"), "200", "StaffReservation");
+        assertTrue(operation(doc, "/api/v1/reservations/{reservationId}", "get").path("responses").has("404"));
+        var schemas = doc.path("components").path("schemas");
+        assertEquals(Set.of("reservationId", "propertyId", "confirmationCode", "status", "source", "sourceReference", "currency", "createdAt", "responsibleGuest", "stays"), strings(schemas.path("StaffReservation").path("required")));
+        for (var entry : Map.of("StaffReservation", "responsibleGuest", "StaffStay", "room").entrySet()) {
+            var nullable = schemas.path(entry.getKey()).path("properties").path(entry.getValue());
+            assertEquals(2, nullable.path("anyOf").size());
+            assertEquals("null", nullable.path("anyOf").get(1).path("type").asText());
+        }
+        assertEquals(Set.of("string", "null"), strings(schemas.path("StaffReservation").path("properties").path("source").path("type")));
+        assertEquals("date", schemas.path("StaffStay").path("properties").path("arrival").path("format").asText());
+        assertEquals(Set.of("profileId", "firstName", "lastName"), strings(schemas.path("ResponsibleGuestView").path("required")));
     }
 
     private JsonNode document() throws Exception {

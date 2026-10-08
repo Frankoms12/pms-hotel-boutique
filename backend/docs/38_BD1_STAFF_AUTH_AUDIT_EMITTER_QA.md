@@ -76,7 +76,7 @@ def request(method, path, body=None, headers=None):
         return response.status, json.loads(raw) if raw else None
 
 status, login = request('POST', '/api/v1/staff-auth/sessions',
-    {'username':'qa_auth03', 'password':'QA-only-auth03-password'})
+    {'email':'qa-auth03@example.test', 'password':'QA-only-auth03-password'})
 assert status == 201
 print('login:', status)
 status, rotated = request('POST', '/api/v1/staff-auth/refresh',

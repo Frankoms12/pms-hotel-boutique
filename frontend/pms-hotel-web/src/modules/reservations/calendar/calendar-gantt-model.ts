@@ -128,6 +128,7 @@ export function buildGanttGrid(
   const occupyingPerDay = new Map<string, Set<string>>();
 
   for (const reservation of reservations) {
+    if (!reservation.stayStart || !reservation.stayEnd) continue;
     if (!overlapsWindow(reservation.stayStart, reservation.stayEnd, windowKeys)) {
       continue;
     }
@@ -150,7 +151,7 @@ export function buildGanttGrid(
     visibleCells.forEach((cell, index) => {
       cell.bookings.push({
         id: reservation.id,
-        guestName: reservation.guestName,
+        guestName: reservation.guestName ?? "Responsable no registrado",
         status: reservation.status,
         isStart: index === 0,
         isEnd: index === visibleCells.length - 1,

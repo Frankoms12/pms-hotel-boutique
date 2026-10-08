@@ -136,6 +136,16 @@ describe("httpRequest client with Interceptors", () => {
     expect(unauthorizedSpy).toHaveBeenCalledTimes(1);
   });
 
+  it("preserves a cookie BFF 401 without broadcasting a global unauthorized event", async () => {
+    const listener = vi.fn();
+    const unsubscribe = onUnauthorized(listener);
+    mockServer.use(http.get("http://pms.test/api/auth/guest/session", () => new HttpResponse(null, { status: 401 })));
+    try {
+      await expect(httpRequest({ path: "http://pms.test/api/auth/guest/session", withAuth: false })).rejects.toBeInstanceOf(HttpUnauthorizedError);
+      expect(listener).not.toHaveBeenCalled();
+    } finally { unsubscribe(); }
+  });
+
   it("throws HttpForbiddenError on 403 status", async () => {
     vi.spyOn(global, "fetch").mockResolvedValueOnce({
       ok: false,

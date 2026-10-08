@@ -33,7 +33,7 @@ export function AccountDashboardPage() {
           <h1>Mi cuenta</h1>
           <p>Hola, {summary.guestName}. Consulta tus reservas, facturas, rewards y promociones desde un solo lugar.</p>
           <span className={styles.statusTag}>
-            {summary.isActive ? "Cuenta activa" : "Cuenta inactiva"} · {account.externalIdentities ? account.externalIdentities.some(identity => identity.provider === "GOOGLE") ? "Google conectado" : "Acceso por correo" : "Sesión de huésped"} · {summary.linkedReservationsCount} reservas vinculadas
+            {summary.isActive ? "Cuenta activa" : "Cuenta inactiva"} · Sesión de huésped · {summary.linkedReservationsCount} reservas vinculadas
           </span>
         </div>
         <div className={styles.actions}>

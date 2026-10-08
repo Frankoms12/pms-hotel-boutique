@@ -1,0 +1,42 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-guest-registration-010
+      author: alan-bd1
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              CREATE TABLE guest_pending_registrations (
+                id uuid PRIMARY KEY,
+                email varchar(50) NOT NULL,
+                email_fingerprint char(64) NOT NULL,
+                password_hash varchar(255),
+                binding_hash char(64) NOT NULL,
+                otp_hash char(64),
+                status varchar(20) NOT NULL CHECK (status IN ('PENDING_SEND','READY','UNKNOWN','INVALID','CONSUMED','EXPIRED','LOCKED')),
+                attempts integer NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 5),
+                generation integer NOT NULL DEFAULT 0,
+                created_at timestamptz NOT NULL,
+                expires_at timestamptz NOT NULL,
+                otp_expires_at timestamptz NOT NULL,
+                sent_at timestamptz,
+                consumed_at timestamptz
+              );
+              CREATE INDEX ix_registration_email_time ON guest_pending_registrations(email_fingerprint,created_at DESC);
+              CREATE TABLE guest_registration_deliveries (
+                id uuid PRIMARY KEY,
+                registration_id uuid NOT NULL REFERENCES guest_pending_registrations(id),
+                email_fingerprint char(64) NOT NULL,
+                sent_at timestamptz NOT NULL
+              );
+              CREATE INDEX ix_registration_delivery_email_time ON guest_registration_deliveries(email_fingerprint,sent_at DESC);
+              CREATE TABLE guest_email_verifications (
+                id uuid PRIMARY KEY,
+                guest_account_id uuid NOT NULL REFERENCES guest_accounts(id),
+                normalized_email varchar(320) NOT NULL,
+                source varchar(16) NOT NULL CHECK (source IN ('REGISTRATION','GOOGLE')),
+                registration_id uuid UNIQUE REFERENCES guest_pending_registrations(id),
+                verified_at timestamptz NOT NULL,
+                CHECK ((source='REGISTRATION') = (registration_id IS NOT NULL))
+              );
+              CREATE INDEX ix_guest_email_verification_account ON guest_email_verifications(guest_account_id);

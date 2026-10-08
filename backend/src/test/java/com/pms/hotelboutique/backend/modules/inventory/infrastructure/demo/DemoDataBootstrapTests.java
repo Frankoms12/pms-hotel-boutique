@@ -11,6 +11,7 @@ class DemoDataBootstrapTests {
     private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
     private ApplicationContextRunner context(String enabled, String... profiles) {
         return new ApplicationContextRunner().withUserConfiguration(DemoDataBootstrap.class)
+                .withBean(org.springframework.security.crypto.password.PasswordEncoder.class, () -> mock(org.springframework.security.crypto.password.PasswordEncoder.class))
                 .withBean(JdbcTemplate.class, () -> jdbc).withBean(DemoRatePolicy.class, DemoRatePolicy::new)
                 .withInitializer(ctx -> ctx.getEnvironment().setActiveProfiles(profiles))
                 .withPropertyValues("pms.demo.data.enabled=" + enabled);

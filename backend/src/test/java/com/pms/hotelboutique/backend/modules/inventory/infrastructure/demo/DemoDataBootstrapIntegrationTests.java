@@ -17,9 +17,10 @@ import static org.junit.jupiter.api.Assertions.*;
 class DemoDataBootstrapIntegrationTests {
     @Autowired JdbcTemplate jdbc;
     @Autowired DemoRatePolicy rates;
+    @Autowired org.springframework.security.crypto.password.PasswordEncoder passwords;
     @Autowired PublicAvailabilityService availability;
     private final UUID property = DemoDataBootstrap.PROPERTY_ID;
-    private void populate() { new DemoDataBootstrap(jdbc, rates).run(null); }
+    private void populate() { new DemoDataBootstrap(jdbc, rates, passwords).run(null); }
     private int count(String table) { return jdbc.queryForObject("SELECT count(*) FROM " + table + " WHERE property_id=?", Integer.class, property); }
     @Test void disabledNormalContextStartsWithoutDemoData() {
         assertEquals(0, jdbc.queryForObject("SELECT count(*) FROM properties WHERE id=?", Integer.class, property));
@@ -45,6 +46,18 @@ class DemoDataBootstrapIntegrationTests {
         jdbc.update("DELETE FROM rooms WHERE room_type_id IN (SELECT id FROM room_types WHERE property_id=? AND code='DLX')", property);
         jdbc.update("DELETE FROM room_types WHERE property_id=? AND code='DLX'", property);
         populate(); assertEquals(6,count("room_types")); assertEquals(24,count("rooms"));
+    }
+    @Test void demoCredentialsAreHashedIdempotentAndHaveSeparateIdentities() {
+        populate();
+        String staffHash=jdbc.queryForObject("SELECT password_hash FROM staff_users WHERE work_email=?",String.class,DemoDataBootstrap.STAFF_EMAIL);
+        String guestHash=jdbc.queryForObject("SELECT password_hash FROM guest_password_credentials c JOIN guest_accounts a ON a.id=c.guest_account_id WHERE email=?",String.class,DemoDataBootstrap.GUEST_EMAIL);
+        assertTrue(passwords.matches(DemoDataBootstrap.DEMO_PASSWORD,staffHash));
+        assertTrue(passwords.matches(DemoDataBootstrap.DEMO_PASSWORD,guestHash));
+        populate();
+        assertEquals(staffHash,jdbc.queryForObject("SELECT password_hash FROM staff_users WHERE work_email=?",String.class,DemoDataBootstrap.STAFF_EMAIL));
+        assertEquals(guestHash,jdbc.queryForObject("SELECT password_hash FROM guest_password_credentials c JOIN guest_accounts a ON a.id=c.guest_account_id WHERE email=?",String.class,DemoDataBootstrap.GUEST_EMAIL));
+        assertEquals(1,jdbc.queryForObject("SELECT count(*) FROM membership_properties mp JOIN staff_users s ON s.id=mp.staff_user_id WHERE s.work_email=? AND mp.property_id=?",Integer.class,DemoDataBootstrap.STAFF_EMAIL,property));
+        assertEquals(0,jdbc.queryForObject("SELECT count(*) FROM guest_identities i JOIN guest_accounts a ON a.id=i.guest_account_id WHERE a.email=?",Integer.class,DemoDataBootstrap.GUEST_EMAIL));
     }
     @Test void conflictingPropertyIsReportedAndNeverOverwritten() {
         populate(); jdbc.update("UPDATE properties SET currency='USD' WHERE id=?", property);

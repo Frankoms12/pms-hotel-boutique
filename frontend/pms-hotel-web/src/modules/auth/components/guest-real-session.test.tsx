@@ -14,7 +14,10 @@ import { GuestSessionProvider, useGuestSession } from "./guest-session-provider"
 const endpoint = "*/api/auth/guest/session";
 const dto = { guestAccountId: "guest-real", sessionId: "session-real", email: "guest@example.test", context: "GUEST" };
 
-beforeEach(() => vi.stubEnv("NEXT_PUBLIC_USE_MOCK_API", "false"));
+beforeEach(() => { vi.stubEnv("NEXT_PUBLIC_USE_MOCK_API", "false"); mockServer.use(
+  http.get("*/api/auth/staff/session", () => new HttpResponse(null, { status: 401 })),
+  http.post("*/api/auth/staff/refresh", () => new HttpResponse(null, { status: 401 })),
+); });
 afterEach(() => { cleanup(); vi.unstubAllEnvs(); setAuthToken(null); });
 
 function Observer() {
@@ -192,17 +195,9 @@ describe("Guest session through the real BFF", () => {
     expect(screen.getByLabelText("Guest session")).toHaveTextContent('"status":"signed-out"');
   });
 
-  it("does not call the real session BFF in mock mode", async () => {
-    vi.stubEnv("NEXT_PUBLIC_USE_MOCK_API", "true");
-    const bff = vi.fn(() => new HttpResponse(null, { status: 401 }));
-    mockServer.use(http.get(endpoint, bff), http.delete(endpoint, bff));
-    const { user, navigate, navigation } = setup("access");
-    await user.click(screen.getByRole("button", { name: "Continuar con Google" }));
-    await waitFor(() => expect(navigation.replace).toHaveBeenCalledExactlyOnceWith('/cuenta'));
-    navigate("account");
-    await user.click(screen.getByRole("button", { name: "Cerrar sesión" }));
-    expect(screen.getByLabelText("Guest session")).toHaveTextContent('"status":"signed-out"');
-    expect(screen.getByLabelText("Guest session")).toHaveTextContent('"accessMethod":null');
-    expect(bff).not.toHaveBeenCalled();
+  it.each(['true','false'])('uses real Guest BFF regardless of data mocks=%s',async mock=>{
+    vi.stubEnv('NEXT_PUBLIC_USE_MOCK_API',mock);
+    const bff=vi.fn(()=>HttpResponse.json(dto));mockServer.use(http.get(endpoint,bff));setup('account');
+    expect(await screen.findByRole('heading',{name:'Cuenta autenticada'})).toBeInTheDocument();expect(bff).toHaveBeenCalledOnce();
   });
 });

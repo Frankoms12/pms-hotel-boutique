@@ -9,6 +9,7 @@ import com.pms.hotelboutique.backend.modules.securityauth.infrastructure.persist
 import com.pms.hotelboutique.backend.modules.securityauth.infrastructure.persistence.RefreshTokenRepository;
 import com.pms.hotelboutique.backend.modules.securityauth.infrastructure.persistence.StaffUserRepository;
 import com.pms.hotelboutique.backend.modules.securityauth.infrastructure.security.StaffJwtService;
+import com.pms.hotelboutique.backend.infrastructure.security.PasswordLoginValidator;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 public class StaffAuthServiceImpl implements StaffAuthService {
+    private final PasswordLoginValidator loginInputs;
     private final StaffUserRepository staffUsers;
     private final AuthSessionRepository sessions;
     private final RefreshTokenRepository refreshTokens;
@@ -33,27 +35,33 @@ public class StaffAuthServiceImpl implements StaffAuthService {
     private final StaffJwtService jwtService;
     private final StaffAuthorizationService authorizationService;
     private final Duration refreshTokenTtl;
+    private final String dummyHash;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public StaffAuthServiceImpl(StaffUserRepository staffUsers, AuthSessionRepository sessions,
             RefreshTokenRepository refreshTokens, AuthAuditEventRepository auditEvents,
             PasswordEncoder passwordEncoder, StaffJwtService jwtService, StaffAuthorizationService authorizationService,
-            @Value("${pms.security.refresh-token-ttl:P7D}") Duration refreshTokenTtl) {
+            @Value("${pms.security.refresh-token-ttl:P7D}") Duration refreshTokenTtl, PasswordLoginValidator loginInputs) {
+        this.loginInputs = loginInputs;
         this.staffUsers = staffUsers;
         this.sessions = sessions;
         this.refreshTokens = refreshTokens;
         this.auditEvents = auditEvents;
         this.passwordEncoder = passwordEncoder;
+        this.dummyHash = passwordEncoder.encode(UUID.randomUUID().toString());
         this.jwtService = jwtService;
         this.authorizationService = authorizationService;
         this.refreshTokenTtl = refreshTokenTtl;
     }
 
     @Override
-    public StaffTokenPair login(String username, String password) {
+    public StaffTokenPair login(String email, String password) {
+        String normalizedEmail = loginInputs.normalizedEmail(email, password);
         Instant now = Instant.now();
-        StaffUser user = staffUsers.findByUsername(username.trim()).orElseThrow(StaffAuthenticationException::new);
-        if (!user.isActive() || !passwordEncoder.matches(password, user.getPasswordHash())) {
+        StaffUser user = staffUsers.findByNormalizedEmail(normalizedEmail).orElse(null);
+        boolean matched = passwordEncoder.matches(password, user == null ? dummyHash : user.getPasswordHash());
+        if (user == null) throw new StaffAuthenticationException();
+        if (!matched || !user.isActive()) {
             auditEvents.save(new AuthAuditEvent("STAFF_LOGIN_FAILED", user.getId(), null, "invalid_credentials", now));
             throw new StaffAuthenticationException();
         }
@@ -100,6 +108,16 @@ public class StaffAuthServiceImpl implements StaffAuthService {
         StaffPrincipal active = getActivePrincipal(principal);
         AuthSession session = sessions.findById(active.sessionId()).orElseThrow(StaffAuthenticationException::new);
         revokeSession(session, Instant.now(), "logout", active.staffUserId());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean acceptsCredentials(String email, String password) {
+        StaffUser user = staffUsers.findByNormalizedEmail(loginInputs.normalizedEmail(email, password)).orElse(null);
+        boolean matched = passwordEncoder.matches(password, user == null ? dummyHash : user.getPasswordHash());
+        if (!matched || user == null || !user.isActive()) return false;
+        try { authorizationService.resolve(user.getId()); return true; }
+        catch (StaffAuthenticationException invalidAuthorization) { return false; }
     }
 
     private StaffTokenPair createTokenPair(AuthSession session, UUID familyId, Instant now) {

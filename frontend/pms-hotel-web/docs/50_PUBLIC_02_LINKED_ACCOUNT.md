@@ -32,7 +32,7 @@ La vinculación real de reservas desde Web sigue pendiente en el módulo account
 
 ## QA
 
-Probar en `http://localhost:3000/acceso` con `NEXT_PUBLIC_USE_MOCK_API=true`: login Google/correo directo a cuenta/checkout; Crear cuenta por Google/correo con confirmación; regreso a opciones; errores de resumen de registro; menú principal oculto en confirmación; teclado/foco; 320–1440 px. No se necesita crear datos en la BD.
+Probar en `http://localhost:3001/acceso` con `NEXT_PUBLIC_USE_MOCK_API=true`: login Google/correo directo a cuenta/checkout; Crear cuenta por Google/correo con confirmación; regreso a opciones; errores de resumen de registro; menú principal oculto en confirmación; teclado/foco; 320–1440 px. No se necesita crear datos en la BD.
 
 Aceptación: confirmación exclusiva del registro, login directo sin pasos extra, componente dinámico reutilizable, acciones explícitas con rutas seguras, estados loading/error, datos separados de identidad, cero Apple, layout responsive sin clipping.
 

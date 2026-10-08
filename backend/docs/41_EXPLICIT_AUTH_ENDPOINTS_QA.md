@@ -128,17 +128,18 @@ docker compose --env-file .env up -d --build
 docker compose --env-file .env ps
 ```
 
-Esperar postgres/backend/web healthy. Con el ejemplo, Web está en
-http://localhost:3001 y Swagger en http://localhost:8081/swagger-ui/index.html;
-PMS_WEB_PORT/PMS_BACKEND_PORT son configurables. BFF usa siempre backend:8080 y
-el callback Google entra al Web del mismo stack, según PMS_WEB_PUBLIC_URL y
-GOOGLE_REDIRECT_URI. Los puertos 18085/18086 son evidencia aislada, no se usan
-para el flujo integrado normal.
+Esperar postgres/backend/web healthy. Web es **http://localhost:3001**, puerto
+fijo versionado; Compose raíz publica únicamente Web, Backend/PostgreSQL internos.
+BFF usa backend:8080 y Google callback
+http://localhost:3001/api/auth/guest/google/callback. Swagger requiere el override
+explícito `-f compose.yaml -f compose.debug.yaml`, en localhost:8081.
+[Decisión vigente AUTH-UNIFIED-01](44_UNIFIED_LOGIN_CONTRACT_QA.md).
+Los puertos 18085/18086 son evidencia aislada, no QA integrado habitual.
 
 ## Staff local reproducible y Swagger
 
-El bootstrap real recibe los tres PMS_BOOTSTRAP_ADMIN_* del .env. No hay cuenta
-por defecto en aplicación/Compose. Para un entorno local nuevo puede activarse
+El bootstrap real recibe los tres PMS_BOOTSTRAP_ADMIN_* del .env. El bootstrap SUPER_ADMIN sigue opt-in. DemoDataBootstrap agrega Staff RECEPCION y
+Guest password únicamente dev/demo + flag; ver [dataset local](../../docs/LOCAL_DEMO_DATASET.md). Para un entorno local nuevo puede activarse
 el bloque sintético opcional de .env.example: local_staff,
 local_staff@example.test y contraseña PMS-Local-Disposable-Only!2026. Esa
 contraseña es exclusiva de este stack local; no reutilizarla fuera de desarrollo.
@@ -146,7 +147,7 @@ Si el .env ya define Staff, usar esa cuenta y no sobrescribirla. Bootstrap
 SUPER_ADMIN no duplica ni cambia un username existente.
 
 1. Quitar un Bearer Staff previo en Authorize. POST `/api/v1/staff-auth/login`
-   → Try it out → enviar username/password locales del .env. Esperado 201 con
+   → Try it out → enviar email/password locales del .env. Esperado 201 con
    accessToken/refreshToken/accessTokenExpiresInSeconds. No se añaden las
    credenciales locales a examples/defaults OpenAPI.
 2. Copiar solo accessToken → Authorize → bearerAuth; pegar sin prefijo Bearer.
@@ -200,7 +201,7 @@ QA manual y no se da por PASS por un start exitoso.
 ## Staff: aliases, legacy y revocación
 
 Importar [colección BD1](../postman/BD1-Backend-APIs.postman_collection.json), poner
-baseUrl=`http://localhost:8081` y completar staffUsername/staffPassword solo
+baseUrl=`http://localhost:8081` y completar staffEmail/staffPassword solo
 localmente con las credenciales Staff del .env integrado. Ejecutar la carpeta
 **Staff — Auth explícita y compatibilidad**.
 Login/refresh guardan tokens para la secuencia; el archivo versionado está vacío.
@@ -259,7 +260,7 @@ con códigos que el BFF ya usó. Nunca sustituir Google por email/password.
 
 ## Negativos y evidencia
 
-- Login/sessions Staff con JSON incompleto/malformado o username/password vacíos:
+- Login/sessions Staff con JSON incompleto/malformado o email/password vacíos:
   400 en MockMvc/validación MVC. En el servidor HTTP actual, el redispatch
   a /error protegido los convierte en 401 sin cuerpo, tanto en login como en
   sessions; la colección comprueba esa respuesta heredada. Credenciales
@@ -297,8 +298,10 @@ docker compose -p pms_auth_manual_qa -f compose.auth-manual-qa.yaml --profile ma
 ```
 
 Ese entorno conserva qa_staff / qa_staff@example.test y su contraseña sintética
-QA-Disposable-Staff-Only!2026, exclusiva de ese QA aislado (no usarla en el stack
-integrado). Su Swagger es localhost:18086. Para flujos normales usar compose.yaml
+QA-Disposable-Staff-Only!2026. En la entrega original era exclusiva del QA aislado;
+el 2026-10-06 Alan autorizó crear la misma cuenta SUPER_ADMIN también en la BD
+local del Compose integrado para QA de /acceso (ver [guía 44](44_UNIFIED_LOGIN_CONTRACT_QA.md)).
+No es un seed de producción. Su Swagger aislado es localhost:18086. Para flujos normales usar compose.yaml
 raíz. compose.bd2-test.yaml conserva exclusivamente postgres/verify originales.
 La evidencia siguiente corresponde al entorno aislado previo a esta separación.
 

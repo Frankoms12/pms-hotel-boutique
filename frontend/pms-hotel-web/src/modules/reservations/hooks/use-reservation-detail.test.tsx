@@ -55,6 +55,13 @@ function detailDto() {
 }
 
 describe("useReservationDetail", () => {
+  it.each(['property_id', 'reservation_id'] as const)('rejects a detail with mismatched %s', async field => {
+    const dto = detailDto(); dto[field] = 'unrequested-id'; getReservationDetailMock.mockResolvedValueOnce(dto);
+    const { result } = renderHook(() => useReservationDetail('GT-HB-01', 'http://pms.test/contract/reservations', 'HB-2026-08421'), { wrapper: createWrapper() });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error?.message).toBe('RESERVATION_SCOPE_MISMATCH');
+    expect(result.current.data).toBeUndefined();
+  });
   beforeEach(() => {
     getReservationDetailMock.mockReset();
   });

@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-guest-registration-request-quota-011
+      author: alan-bd1
+      changes:
+        - sql:
+            dbms: postgresql
+            sql: |
+              CREATE TABLE guest_registration_request_events (
+                id uuid PRIMARY KEY,
+                registration_id uuid NOT NULL REFERENCES guest_pending_registrations(id),
+                email_fingerprint char(64) NOT NULL,
+                requested_at timestamptz NOT NULL
+              );
+              CREATE INDEX ix_registration_request_email_time
+                ON guest_registration_request_events(email_fingerprint, requested_at);
+              INSERT INTO guest_registration_request_events(id,registration_id,email_fingerprint,requested_at)
+                SELECT id,registration_id,email_fingerprint,sent_at FROM guest_registration_deliveries;

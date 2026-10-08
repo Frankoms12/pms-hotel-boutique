@@ -40,7 +40,10 @@ describe("enableMocking", () => {
 
     await Promise.all([enableMocking(), enableMocking()]);
     expect(startMock).toHaveBeenCalledTimes(2);
-    expect(startMock).toHaveBeenLastCalledWith({ onUnhandledRequest: "bypass" });
+    expect(startMock).toHaveBeenLastCalledWith({
+      serviceWorker: { url: "/pmsMockServiceWorker.js" },
+      onUnhandledRequest: "bypass",
+    });
   });
 
   it("does not start a browser worker during server rendering", async () => {

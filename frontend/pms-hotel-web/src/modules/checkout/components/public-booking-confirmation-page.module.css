@@ -29,6 +29,8 @@
 .paymentMethod { font-size: 13px; margin: 0 0 12px; }.toast { background: #e9f1e5; color: #486641; border-radius: 10px; padding: 14px; margin: 18px 0 0; font-size: 12px; line-height: 1.8; }
 .failureCard { max-width: 780px; margin-inline: auto; }.alert { background: #fff4f6; color: #a13a4c; border: 1px solid #efd0d7; border-radius: 14px; padding: 20px; margin-bottom: 28px; font-size: 13px; line-height: 1.9; }.alert strong { font-weight: 600; }.alert p { font-size: 12px; margin: 10px 0 0; }
 .failureActions { display: grid; gap: 12px; }.help { display: block; margin: 24px 0 6px; min-height: 44px; background: none; border: 0; color: #5a6b5d; font-size: 12px; line-height: 1.8; padding: 0; text-align: left; cursor: pointer; }.help:hover { text-decoration: underline; }.helpMessage { background: #eef2eb; padding: 14px; border-radius: 10px; font-size: 12px; line-height: 1.8; color: #617059; }
+.modalLayer { position: relative; z-index: 60; }
+.replayDialog { max-height: calc(100dvh - 2 * var(--space-6)); overflow-y: auto; }
 .secondary:disabled { opacity: .55; cursor: not-allowed; }.printTitle { display: none; }.page :is(a,button,select):focus-visible { outline: 2px solid #5a6b5d; outline-offset: 4px; }
 @media(max-width:950px) { .layout { grid-template-columns: minmax(0,1.4fr) minmax(285px,1fr); gap: 20px; }.card { padding: 24px; }.copy span { display: none; } }
 @media(max-width:800px) { .page { padding: 24px 20px 60px; }.layout { grid-template-columns: 1fr; }.copy span { display: inline; } }

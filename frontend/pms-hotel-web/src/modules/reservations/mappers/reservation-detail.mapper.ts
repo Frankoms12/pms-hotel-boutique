@@ -10,10 +10,11 @@ import type {
 import type { ReservationDetailFinancialSummary, ReservationDetailData, ReservationFinanceLine, ReservationGuestSummary, ReservationStayDetail } from "../model/reservation-detail";
 
 function mapStay(dto: ReservationStayDetailDto): ReservationStayDetail {
+  if ((dto.room_id === null) !== (dto.room_label === null)) throw new DomainMappingError('INCONSISTENT_ROOM_ASSIGNMENT');
   return {
     id: requiredText(dto.stay_id, "INVALID_RESERVATION_STAY_ID"),
-    roomId: requiredText(dto.room_id, "INVALID_RESERVATION_STAY_ROOM_ID"),
-    roomLabel: requiredText(dto.room_label, "INVALID_RESERVATION_STAY_ROOM_LABEL"),
+    roomId: dto.room_id === null ? null : requiredText(dto.room_id, "INVALID_RESERVATION_STAY_ROOM_ID"),
+    roomLabel: dto.room_label === null ? null : requiredText(dto.room_label, "INVALID_RESERVATION_STAY_ROOM_LABEL"),
     roomType: requiredText(dto.room_type, "INVALID_RESERVATION_STAY_ROOM_TYPE"),
     checkIn: parseDay(dto.check_in, "INVALID_RESERVATION_STAY_CHECK_IN"),
     checkOut: parseDay(dto.check_out, "INVALID_RESERVATION_STAY_CHECK_OUT"),

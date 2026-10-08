@@ -46,7 +46,7 @@ class StaffAuthAuditEmitterIntegrationTests {
     @Test
     void successfulLoginRefreshAndLogoutAttributeOnlyVerifiedStaffActors() {
         var staff = staff();
-        var login = auth.login(staff.username(), PASSWORD);
+        var login = auth.login(staff.username().substring(0, 37) + "@example.test", PASSWORD);
         var principal = jwt.parse(login.accessToken());
         var rotated = auth.refresh(login.refreshToken());
         auth.logout(jwt.parse(rotated.accessToken()));
@@ -68,7 +68,7 @@ class StaffAuthAuditEmitterIntegrationTests {
     void bootstrapAttributesSystemAndTheExplicitMembershipOrganizationOnce() {
         String username = "boot-audit-" + UUID.randomUUID();
         new TransactionTemplate(transactions).executeWithoutResult(status -> {
-            bootstrap.bootstrap(users, events, authorization, passwords, username, username + "@example.test", PASSWORD);
+            bootstrap.bootstrap(users, events, authorization, passwords, username, username.substring(0, 37) + "@example.test", PASSWORD);
             events.flush();
             UUID subject = jdbc.queryForObject("SELECT id FROM staff_users WHERE username=?", UUID.class, username);
             var row = rows(subject).getFirst();
@@ -83,7 +83,7 @@ class StaffAuthAuditEmitterIntegrationTests {
             assertNull(row.get("correlation_id"));
             assertEquals(ORGANIZATION, jdbc.queryForObject(
                     "SELECT organization_id FROM organization_memberships WHERE staff_user_id=?", UUID.class, subject));
-            bootstrap.bootstrap(users, events, authorization, passwords, username, username + "@example.test", PASSWORD);
+            bootstrap.bootstrap(users, events, authorization, passwords, username, username.substring(0, 37) + "@example.test", PASSWORD);
             events.flush();
             assertEquals(1, rows(subject).size());
             status.setRollbackOnly();
@@ -118,7 +118,7 @@ class StaffAuthAuditEmitterIntegrationTests {
     void failedLoginAttemptStillUsesLegacyEventWithoutNewAttribution() {
         var staff = staff();
         clearInvocations(events);
-        assertThrows(StaffAuthenticationException.class, () -> auth.login(staff.username(), "invalid-password"));
+        assertThrows(StaffAuthenticationException.class, () -> auth.login(staff.username().substring(0, 37) + "@example.test", "invalid-password"));
         var attempt = capturedEvent();
         assertEquals("STAFF_LOGIN_FAILED", ReflectionTestUtils.getField(attempt, "eventType"));
         assertEquals(staff.id(), ReflectionTestUtils.getField(attempt, "staffUserId"));
@@ -130,7 +130,7 @@ class StaffAuthAuditEmitterIntegrationTests {
     @Test
     void rejectedRefreshAttemptDoesNotAcquireTheSessionActorAsAttribution() {
         var staff = staff();
-        var login = auth.login(staff.username(), PASSWORD);
+        var login = auth.login(staff.username().substring(0, 37) + "@example.test", PASSWORD);
         auth.refresh(login.refreshToken());
         clearInvocations(events);
         assertThrows(StaffAuthenticationException.class, () -> auth.refresh(login.refreshToken()));
@@ -145,7 +145,7 @@ class StaffAuthAuditEmitterIntegrationTests {
     @Test
     void logoutRejectsPrincipalThatDoesNotMatchTheAuthenticatedSession() {
         var staff = staff();
-        var login = auth.login(staff.username(), PASSWORD);
+        var login = auth.login(staff.username().substring(0, 37) + "@example.test", PASSWORD);
         var principal = jwt.parse(login.accessToken());
         var forged = new StaffPrincipal(UUID.randomUUID(), principal.sessionId(), staff.username(), principal.roleCode());
         assertThrows(StaffAuthenticationException.class, () -> auth.logout(forged));
@@ -160,7 +160,7 @@ class StaffAuthAuditEmitterIntegrationTests {
                 + "VALUES (?,'STAFF_LOGIN_SUCCEEDED',now(),'synthetic preserved history')", legacyId);
         var legacy = jdbc.queryForMap("SELECT * FROM auth_audit_events WHERE id=?", legacyId);
         var staff = staff();
-        auth.login(staff.username(), PASSWORD);
+        auth.login(staff.username().substring(0, 37) + "@example.test", PASSWORD);
         var emitted = rows(staff.id()).getFirst();
         UUID id = (UUID) emitted.get("id");
         rejectMutation("UPDATE auth_audit_events SET actor_id=NULL WHERE id=?", id);
@@ -172,7 +172,7 @@ class StaffAuthAuditEmitterIntegrationTests {
     @Test
     void logoutAttributionAndRevocationRollbackWithTheExistingTransaction() {
         var staff = staff();
-        var login = auth.login(staff.username(), PASSWORD);
+        var login = auth.login(staff.username().substring(0, 37) + "@example.test", PASSWORD);
         var principal = jwt.parse(login.accessToken());
         new TransactionTemplate(transactions).executeWithoutResult(status -> {
             auth.logout(principal);
@@ -188,7 +188,7 @@ class StaffAuthAuditEmitterIntegrationTests {
         UUID id = UUID.randomUUID();
         String username = "emit-audit-" + id;
         new TransactionTemplate(transactions).executeWithoutResult(status -> {
-            users.saveAndFlush(new StaffUser(id, username, username + "@example.test",
+            users.saveAndFlush(new StaffUser(id, username, username.substring(0, 37) + "@example.test",
                     passwords.encode(PASSWORD), "SUPER_ADMIN", Instant.now()));
             authorization.ensureSuperAdminMembership(id, ORGANIZATION);
         });

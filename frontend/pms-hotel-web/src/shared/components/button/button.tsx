@@ -12,6 +12,13 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   children: React.ReactNode;
 }
 
+/** Reuse the same visual primitive for navigation links without nested controls. */
+export function buttonClassName({variant='primary',size='md',disabled=false,className=''}: Pick<ButtonProps,'variant'|'size'|'disabled'|'className'> = {}) {
+  const variants={primary:styles.variantPrimary,secondary:styles.variantSecondary,outline:styles.variantOutline,ghost:styles.variantGhost};
+  const sizes={sm:styles.sizeSm,md:styles.sizeMd,lg:styles.sizeLg};
+  return [styles.button,variants[variant],sizes[size],disabled?styles.buttonDisabled:'',className].filter(Boolean).join(' ');
+}
+
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {
@@ -26,28 +33,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
-    const variantClass = {
-      primary: styles.variantPrimary,
-      secondary: styles.variantSecondary,
-      outline: styles.variantOutline,
-      ghost: styles.variantGhost,
-    }[variant];
-
-    const sizeClass = {
-      sm: styles.sizeSm,
-      md: styles.sizeMd,
-      lg: styles.sizeLg,
-    }[size];
-
-    const combinedClasses = [
-      styles.button,
-      variantClass,
-      sizeClass,
-      (disabled || isLoading) ? styles.buttonDisabled : '',
-      className || '',
-    ]
-      .filter(Boolean)
-      .join(' ');
+    const combinedClasses=buttonClassName({variant,size,disabled:disabled || isLoading,className});
 
     return (
       <button

@@ -20,6 +20,10 @@ const session = {
 };
 
 describe("mapStaffSession", () => {
+  it("accepts the real Reception authorization including the intake permission", () => {
+    expect(mapStaffSession({ ...session, permissions: ["RESERVATION_MANAGE", "SERVICE_REQUEST_INTAKE", "FOLIO_PAYMENT_OPERATE"] }).permissions)
+      .toEqual(["FOLIO_PAYMENT_OPERATE", "RESERVATION_MANAGE", "SERVICE_REQUEST_INTAKE"]);
+  });
   it("maps the C2 BFF session without exposing tokens", () => {
     expect(mapStaffSession(session)).toEqual({
       id: "8c657b55-7d03-4f10-a77c-1883ad0fd4ae",

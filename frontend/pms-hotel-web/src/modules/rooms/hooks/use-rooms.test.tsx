@@ -52,6 +52,14 @@ describe("useRooms", () => {
     expect(listRoomsMock).not.toHaveBeenCalled();
   });
 
+  it('rejects a response containing rooms from another property', async () => {
+    listRoomsMock.mockResolvedValueOnce({ rooms: [{ room_id: 'RM-1', property_id: 'GT-HB-03', number: '101', floor: null, status: 'ACTIVE', room_type_label: 'Deluxe' }] });
+    const { result } = renderHook(() => useRooms('GT-HB-01', 'http://pms.test/contract/rooms'), { wrapper: createWrapper() });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error?.message).toBe('ROOM_PROPERTY_MISMATCH');
+    expect(result.current.data).toBeUndefined();
+  });
+
   it("exposes an error and allows refetch after a network failure", async () => {
     listRoomsMock.mockRejectedValueOnce(new HttpNetworkError()).mockResolvedValueOnce({ rooms: [] });
 

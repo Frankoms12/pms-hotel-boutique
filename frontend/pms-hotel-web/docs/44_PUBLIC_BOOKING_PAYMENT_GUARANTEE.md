@@ -1,5 +1,9 @@
 # Public 01 — Pago, garantía y confirmación de demostración
 
+Integración real vigente: [submit J6](52_PUBLIC_BOOKING_J6_SUBMIT.md). Las reglas
+de demostración siguientes aplican al modo mock; el modo real utiliza el total
+GTQ y SIMULATED_CARD del contrato Backend.
+
 ## Alcance y fuentes
 
 José autoriza únicamente frontend: «Pago y garantía» y navegación hacia una confirmación simulada, conservando checkout como invitado. La revisión intermedia autorizada posteriormente (documento 45) convierte el pago en el Paso 4. Se reutilizan los contratos provisionales de Payments y el draft en memoria de Checkout. Backlog relacionado: IMP-WEB-0109/0110/0111/0112, owners WEB-4/WEB-1/WEB-3 y reviewers correspondientes. Dependencias formales, contrato productivo, revisión de equipo y Figma siguen pendientes; no se cambia el XLSX ni se declara integración Backend completa.

@@ -5,6 +5,20 @@
 árbol limpio al iniciar. Mantenimiento autorizado por el usuario; estado EN_QA
 hasta su QA manual PASS. Sin commit/push/merge.
 
+## Evolución AUTH-UNIFIED-01 (2026-10-06)
+
+[Contrato vigente](44_UNIFIED_LOGIN_CONTRACT_QA.md): StaffLoginRequest pasa a
+email/password en sessions y login; password writeOnly, email normalizado/max 50.
+GuestLoginRequest nuevo para POST /api/v1/guest-auth/sessions y
+UnifiedLoginRequest para POST /api/v1/auth/sessions; x-audience=internal-bff,
+security=[] sin credencial previa. Guest 201/400/401; unificado 200 selector
+sin tokens/sesión, 201 contexto autenticado/tokens solo BFF, 400/401 genéricos.
+operationIds guestPasswordLogin y unifiedPasswordLogin. No entidades/hash en API.
+Inventario generado real: 38 operaciones / 28 paths / 37 schemas / 11 tags.
+Paridad sin exclusiones y metadata de todas las contraseñas validadas por tests.
+Postman BD1 incluye Guest password, resolución y selección; colecciones Staff
+consumen email/password y variables staffEmail sin secretos. Historial previo abajo.
+
 ## Evolución A3 — Disponibilidad pública (2026-10-06)
 
 Rama `feature/backend-public-availability`, base `b653804`; A3 EN_QA, A2 EN_QA,
@@ -148,7 +162,7 @@ Las respuestas listadas son contractuales, no un catálogo de fallos inesperados
 
 ## Parámetros, límites, nulabilidad y transporte
 
-- **Staff Auth:** username no vacío, máximo 80; password no vacío, máximo 256,
+- **Staff Auth vigente:** email validado y normalizado, máximo 50; password no vacío, máximo 50,
   writeOnly/password y sin ejemplos. Login/refresh devuelven solo al BFF
   accessToken, refreshToken y accessTokenExpiresInSeconds. GET session devuelve
   identidad, permissions y memberships C2 recalculados; sin tokens. Logout 204
@@ -314,3 +328,17 @@ La propiedad upcomingStay usa anyOf [$ref UpcomingStay, type null] para que
 OpenAPI 3.1 acepte realmente objeto o null; customizer acotado a esta propiedad,
 cubierto por prueba estructural. PreferredLanguage admite string/null sin default.
 [Contrato, aceptación y evidencia QA](42_GUEST_ACCOUNT_SUMMARY_CONTRACT_QA.md).
+
+## Evolución STAFF-RESERVATIONS-READ-01 (2026-10-08)
+
+Dos GET Staff adicionales: `/api/v1/reservations` y
+`/api/v1/reservations/{reservationId}`, ambos con propertyId explícito,
+RESERVATION_MANAGE y Bearer Staff. Perfil responsable mínimo, N stays y Room
+nullable, sin datos financieros/ocupación inventados.
+[Contrato/QA49](49_STAFF_RESERVATIONS_READ_CONTRACT.md).
+
+Documento generado en este incremento: **44 operaciones / 34 paths / 52 schemas /
+13 tags**, sin exclusiones. OpenApiContractIntegrationTests valida paridad exacta
+con RequestMappingHandlerMapping, auth/audience, parámetros, headers, respuestas,
+campos requeridos y nullability real de responsibleGuest/room. Baselines anteriores
+se mantienen como historia; evidencia final en AlanHandoff.

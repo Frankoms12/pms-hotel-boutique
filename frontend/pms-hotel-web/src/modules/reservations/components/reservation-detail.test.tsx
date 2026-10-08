@@ -67,6 +67,15 @@ function detailData() {
 }
 
 describe("ReservationDetail", () => {
+  it('shows an unassigned physical room without offering a room move', () => {
+    const data = detailData();
+    useReservationDetailMock.mockReturnValue({ data: { ...data, stays: [{ ...data.stays[0], roomId: null, roomLabel: null }] }, error: null, isLoading: false, refetch: vi.fn() });
+    render(<ReservationDetail propertyId="GT-HB-01" endpoint="http://pms.test/contract/reservations" reservationId="HB-2026-08421" />);
+    expect(screen.getByText('Sin asignar · Deluxe King')).toBeInTheDocument();
+    expect(screen.getByText('Reservada').parentElement).toHaveTextContent('Estado de la estadía: Reservada');
+    expect(screen.queryByRole('button', { name: 'Cambiar habitación' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Volver a reservas/ })).toHaveAttribute('href', '/reservas');
+  });
   it("does not query until composition supplies an authorized scope", () => {
     useReservationDetailMock.mockReturnValue({ data: undefined, error: null, isLoading: false, refetch: vi.fn() });
 

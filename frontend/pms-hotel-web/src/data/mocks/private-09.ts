@@ -7,6 +7,7 @@ import { resolvePropertyScope } from "@/modules/properties";
 import type { PortfolioDTO, ComparisonDTO } from "@/modules/multi-property/dtos/portfolio.dto";
 import { stayDates } from "@/modules/multi-property/model/portfolio";
 import { initialRoles, initialSecurity, private07Keys } from "./private-07";
+import { isLocalStaffLogin, localStaffAccessEnabled } from '@/modules/auth/model/local-staff-access';
 
 export const private09Keys = { identity: "pms:private-09:identity:v1", scenario: "pms:private-09:scenario" };
 export function initialStaffIdentity(): StaffIdentityDTO {
@@ -69,6 +70,36 @@ async function response(request: Request, compare: boolean) {
 }
 
 export const private09Handlers = [
+  http.post('*/__mock/private-09/login', async ({ request }) => {
+    if (!localStaffAccessEnabled()) return new HttpResponse(null, { status: 404 });
+    const input = await request.json() as { email?: unknown; password?: unknown };
+    await delay(200);
+    if (request.signal.aborted) return new HttpResponse(null, { status: 409 });
+    if (typeof input?.email !== 'string' || !isLocalStaffLogin(input.email) || input.password !== '12345678')
+      return new HttpResponse(null, { status: 401 });
+    const identity = { ...initialStaffIdentity(), user_name: 'qa_staff', role_id: 'superadmin' };
+    try {
+      const security = read(private07Keys.security, initialSecurity) as ReturnType<typeof initialSecurity>;
+      mapSecurity(security);
+      const current = security.sessions.find(item => item.is_current);
+      if (current) { current.session_id = identity.session_id; current.status = 'active'; current.last_active = new Date().toISOString(); }
+      else security.sessions.push(initialSecurity().sessions[0]);
+      // Only fixture identity/security are saved; never the request or its password.
+      const previousIdentity = localStorage.getItem(private09Keys.identity);
+      const previousSecurity = localStorage.getItem(private07Keys.security);
+      try {
+        localStorage.setItem(private09Keys.identity, JSON.stringify(identity));
+        localStorage.setItem(private07Keys.security, JSON.stringify(security));
+      } catch {
+        if (previousIdentity === null) localStorage.removeItem(private09Keys.identity);
+        else localStorage.setItem(private09Keys.identity, previousIdentity);
+        if (previousSecurity === null) localStorage.removeItem(private07Keys.security);
+        else localStorage.setItem(private07Keys.security, previousSecurity);
+        throw new Error('LOCAL_STAFF_STORAGE_UNAVAILABLE');
+      }
+      return HttpResponse.json(identity);
+    } catch { return new HttpResponse(null, { status: 503 }); }
+  }),
   http.get("*/__mock/private-09/session", () => {
     try {
       const raw = read(private09Keys.identity, initialStaffIdentity);

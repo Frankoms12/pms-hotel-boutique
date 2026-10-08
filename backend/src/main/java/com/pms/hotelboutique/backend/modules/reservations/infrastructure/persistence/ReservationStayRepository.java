@@ -4,6 +4,7 @@ import com.pms.hotelboutique.backend.modules.reservations.domain.ReservationStay
 import com.pms.hotelboutique.backend.modules.securityauth.application.AuthorizedPropertyScope;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -14,6 +15,9 @@ public interface ReservationStayRepository extends JpaRepository<ReservationStay
     List<ReservationStay> findByReservation_Id(UUID reservationId);
 
     List<ReservationStay> findByReservation_IdAndPropertyId(UUID reservationId, UUID propertyId);
+
+    List<ReservationStay> findByReservation_IdAndPropertyIdIn(UUID reservationId,
+            Set<UUID> propertyIds);
 
     @Query("""
             select s from ReservationStay s join Property p on s.propertyId = p.id

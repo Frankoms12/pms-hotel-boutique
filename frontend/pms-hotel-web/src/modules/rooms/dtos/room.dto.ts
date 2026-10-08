@@ -7,7 +7,7 @@ export interface RoomDto {
   room_id: string;
   property_id: string;
   number: string;
-  floor: string;
+  floor: string | null;
   /** One of ACTIVE | OOO | OOS. */
   status: string;
   room_type_label: string;

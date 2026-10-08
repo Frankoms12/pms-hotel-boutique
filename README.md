@@ -15,29 +15,50 @@ backend/
 ## Stack local integrado con Docker
 
 PostgreSQL + Backend + Web se levantan desde compose.yaml en la raíz.
-Preparar `.env` a partir de [`.env.example`](.env.example) (sin sobrescribir uno
-existente), completar Google y, para Staff local, los tres PMS_BOOTSTRAP_ADMIN_*.
-La cuenta sintética opcional local_staff está documentada en el ejemplo; el
-bootstrap permanece deshabilitado si los tres valores quedan vacíos. No usar
-esa contraseña en producción ni sustituir credenciales de una BD existente.
+Preparar `.env` a partir de [`.env.example`](.env.example), sin sobrescribir uno
+existente ni publicar secretos. Google requiere configuración de desarrollo propia.
+El bootstrap local provee cuentas Staff/Guest email/password para probar `/acceso`;
+ver [dataset y credenciales demo](docs/LOCAL_DEMO_DATASET.md).
+
+QA integrado canónico desde el mismo commit:
 
 ```bash
+git switch main
+git pull --ff-only origin main
 test -f .env || cp .env.example .env
-# Editar .env antes del primer arranque; el archivo está ignorado por Git.
 docker compose --env-file .env up -d --build
 ```
 
-Con el ejemplo: Web en http://localhost:3001 y Swagger en
-http://localhost:8081/swagger-ui/index.html. PMS_WEB_PORT/PMS_BACKEND_PORT permiten
-cambiar esos puertos. PMS_WEB_PUBLIC_URL y GOOGLE_REDIRECT_URI deben usar el mismo
-origen Web; el callback es `/api/auth/guest/google/callback`, registrado exactamente
-en Google. NEXT_PUBLIC_USE_MOCK_API=false permite consumir el BFF real.
+Abrir únicamente **http://localhost:3001/acceso**. Compose fija Web en
+`127.0.0.1:3001:3000`, origen y callback Google en 3001. `3000` es exclusivamente
+el puerto interno de Next. Backend/PostgreSQL no publican puertos al host;
+Web BFF usa `http://backend:8080`, Backend `postgres:5432`.
 
-Web usa PMS_BACKEND_INTERNAL_URL=http://backend:8080; Backend usa postgres:5432.
-Los puertos host no cambian esas URLs internas. PostgreSQL no publica puerto;
-Backend se publica solo en 127.0.0.1 para desarrollo/Swagger. Google recibe las
-variables server-side del .env; el navegador pasa por Web/BFF, con cookies
-HttpOnly y sin tokens en respuestas JSON al JavaScript de la aplicación.
+`/acceso` usa correo electrónico y contraseña para Guest/Staff. Google autentica
+solo Guest; continuar como invitado conserva el journey público sin autenticación.
+Una contraseña válida en ambos contextos exige selector explícito. Tokens quedan
+en cookies HttpOnly separadas; el navegador recibe solo el contexto autenticado.
+Registro y recuperación/cambio de contraseña/MFA quedan pendientes.
+
+Para Swagger/debug Backend activar deliberadamente el override:
+
+```bash
+docker compose --env-file .env -f compose.yaml -f compose.debug.yaml up -d --build
+```
+
+Swagger de tooling: `http://localhost:8081/swagger-ui/index.html`. Para volver al
+entorno normal ejecutar el Compose raíz sin override. El QA integrado habitual
+siempre usa el Compose raíz. Los scripts Web `dev`/`start` fijan también 3001.
+Si el puerto está ocupado, Docker/Next fallan y no prueban otro puerto:
+
+```bash
+docker ps --filter publish=3001
+ss -ltnp 'sport = :3001'
+```
+
+Liberar el proceso/contenedor identificado y repetir; no cambiar el puerto.
+El mismo commit y Compose producen el mismo formulario canónico. Registrar en
+Google `http://localhost:3001/api/auth/guest/google/callback` exactamente.
 
 [Guía completa: preparación, Staff, Google Guest y comprobaciones](docs/13_LOCAL_INTEGRATED_STACK.md).
 [QA de login/me/logout y Swagger](backend/docs/41_EXPLICIT_AUTH_ENDPOINTS_QA.md).

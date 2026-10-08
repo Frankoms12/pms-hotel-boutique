@@ -257,7 +257,12 @@ Guía 41 actualizada, enlaces/Compose/diff --check PASS. Entorno manual saludabl
 disponible para QA del usuario en localhost:18086; EN_QA hasta su nuevo PASS.
 
 
-### Addendum de stack integrado canónico autorizado (2026-10-05)
+### Addendum de stack integrado canónico autorizado (2026-10-05) — histórico
+
+**Sustituido por AUTH-UNIFIED-01 (2026-10-06):** Web fijo 3001 y único puerto
+publicado por Compose normal; Backend/Swagger únicamente con override debug
+explícito. [Contrato vigente](44_UNIFIED_LOGIN_CONTRACT_QA.md). Texto anterior:
+
 
 El usuario solicita volver al compose.yaml raíz como entorno PostgreSQL +
 Backend + Web reproducible: docker compose --env-file .env up -d --build.

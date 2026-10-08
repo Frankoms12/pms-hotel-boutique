@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { applyGuestCookies, backendGuestRequest, type GuestTokens } from "@/lib/bff/guest-auth";
 
 function redirectToApp(path: string) {
-  return NextResponse.redirect(new URL(path, process.env.PMS_WEB_PUBLIC_URL ?? "http://localhost:3000"));
+  return NextResponse.redirect(new URL(path, process.env.PMS_WEB_PUBLIC_URL ?? "http://localhost:3001"));
 }
 
 export async function GET(request: NextRequest) {

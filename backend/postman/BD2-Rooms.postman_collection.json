@@ -37,13 +37,14 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"username\":\"{{staffUsername}}\",\"password\":\"{{staffPassword}}\"}",
+          "raw": "{\"email\":\"{{staffEmail}}\",\"password\":\"{{staffPassword}}\"}",
           "options": {
             "raw": {
               "language": "json"
             }
           }
-        }
+        },
+        "description": "Login: email required, formato email, maxLength=50 tras trim/lowercase; password required/NotBlank, maxLength=50, intacta sin trim ni complejidad nueva. 51 caracteres o entrada inválida: HTTP400. Password writeOnly; no exportar credenciales/tokens reales."
       },
       "event": [
         {

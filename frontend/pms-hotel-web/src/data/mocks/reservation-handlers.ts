@@ -5,6 +5,9 @@
  */
 
 import { http, HttpResponse } from "msw";
+import { staffReservationCreationHandlers, staffCreatedList, staffCreatedReservation } from './staff-reservation-create';
+import { roomAssignmentHandlers, projectAssignedDetail, projectAssignmentSummary } from './room-assignment';
+import { roomOccupancyHandlers } from './room-occupancy';
 
 import type {
   CancellationApplyDto,
@@ -22,6 +25,7 @@ import type {
 const RESERVATIONS_ENDPOINT = "http://pms.test/contract/reservations";
 
 function reservationList(propertyId: string): ReservationListItemDto[] {
+  if (propertyId !== 'GT-HB-01') return [];
   return [
     {
       reservation_id: "HB-2026-08421",
@@ -161,6 +165,14 @@ function reservationCenter(propertyId: string): ReservationCenterDto {
 }
 
 const reservationDetails: Record<string, ReservationDetailDto> = {
+  'HB-2026-08390': {
+    reservation_id: 'HB-2026-08390', property_id: 'GT-HB-01', status: 'PENDING', created_at: '2026-08-24',
+    source: { label: 'Booking', reference: 'BKG-5512099' }, policy_label: 'Garantía pendiente de confirmación',
+    guest: { primary_name: 'Carlos Méndez', phone: null, adults: 1, children: null },
+    stays: [{ stay_id: 'STAY-2026-08390-A', room_id: null, room_label: null, room_type: 'Deluxe King', check_in: '2026-08-30', check_out: '2026-09-01', nights: 2, travel_state: 'RESERVED' }],
+    notes: null, currency: 'GTQ', total_amount: '2320', paid_amount: null, finance_state: 'NO_CAPTURE', rate_per_night: '1160',
+    lines: [{ label: 'Habitación · 2 noches', amount: '2320' }],
+  },
   "HB-2026-08421": {
     reservation_id: "HB-2026-08421",
     property_id: "GT-HB-01",
@@ -391,18 +403,32 @@ const extensionPreviews: Record<string, StayExtensionPreviewDto> = {
 };
 
 export const reservationHandlers = [
+  ...roomOccupancyHandlers(() => Object.values(reservationDetails)),
+  ...roomAssignmentHandlers(() => Object.values(reservationDetails)),
+  ...staffReservationCreationHandlers(() => Object.values(reservationDetails)),
   http.get(RESERVATIONS_ENDPOINT, ({ request }) => {
-    const propertyId = new URL(request.url).searchParams.get("propertyId") ?? "GT-HB-01";
-    return HttpResponse.json(reservationCenter(propertyId));
+    const propertyId = new URL(request.url).searchParams.get("propertyId");
+    if (!propertyId) return new HttpResponse(null, { status: 400 });
+    const center = reservationCenter(propertyId);
+    if (propertyId !== 'GT-HB-01') {
+      center.summary = { arrivals_today: 0, departures_today: 0, vip_today: 0, multi_room_today: 0, late_checkout_today: 0, alerts: 0, confirmed_next_days: 0, decisions_required: 0, total: 0 };
+      center.alerts = [];
+    }
+    center.reservations = [...staffCreatedList(propertyId), ...center.reservations];
+    center.reservations = center.reservations.map(row => projectAssignmentSummary(row,
+      staffCreatedReservation(row.reservation_id, propertyId) ?? reservationDetails[row.reservation_id]));
+    center.summary.total = center.reservations.length;
+    return HttpResponse.json(center);
   }),
-  http.get(`${RESERVATIONS_ENDPOINT}/:reservationId`, ({ params }) => {
-    const detail = reservationDetails[String(params.reservationId)];
+  http.get(`${RESERVATIONS_ENDPOINT}/:reservationId`, ({ params, request }) => {
+    const propertyId = new URL(request.url).searchParams.get('propertyId') ?? '';
+    const detail = staffCreatedReservation(String(params.reservationId), propertyId) ?? reservationDetails[String(params.reservationId)];
 
-    if (!detail) {
+    if (!detail || detail.property_id !== new URL(request.url).searchParams.get('propertyId')) {
       return HttpResponse.text(null, { status: 404 });
     }
 
-    return HttpResponse.json(detail);
+    return HttpResponse.json(projectAssignedDetail(detail));
   }),
   http.get(`${RESERVATIONS_ENDPOINT}/:reservationId/cancellation-preview`, ({ params }) => {
     const preview = cancellationPreviews[String(params.reservationId)];

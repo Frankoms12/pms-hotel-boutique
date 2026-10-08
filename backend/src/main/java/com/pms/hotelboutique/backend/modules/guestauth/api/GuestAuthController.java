@@ -43,5 +43,13 @@ import org.springframework.web.bind.annotation.*;
     @ApiResponse(responseCode = "204", description = "Sesión y refresh Guest revocados; no altera Staff.", content = @Content)
     @ApiResponse(responseCode = "401", description = "JWT/sesión Guest inválidos.", content = @Content) @Operation(summary="Cerrar sesión",description="BFF-only; revoca solo la sesión Guest actual.") public ResponseEntity<Void> logoutExplicit(@Parameter(hidden = true) @AuthenticationPrincipal GuestPrincipal principal){return logout(principal);}
 
+ @PostMapping("/sessions")
+ @Operation(operationId="guestPasswordLogin", summary="Iniciar sesión con correo y contraseña", description="BFF-only; GuestAccount con credential existente, sin registro ni vínculo automático a Google.", security={})
+ @ApiResponse(responseCode="201",description="Sesión Guest; tokens solo BFF.",content=@Content(mediaType="application/json",schema=@Schema(implementation=GuestAuthResponse.class)))
+ @ApiResponse(responseCode="400",description="JSON/email/password inválidos; error sanitizado sin valores rechazados.",content=@Content)
+ @ApiResponse(responseCode="401",description="Credenciales inválidas; incluye cuenta inexistente, inactiva o sin password.",content=@Content(mediaType="application/problem+json",schema=@Schema(implementation=ProblemDetail.class)))
+ public ResponseEntity<GuestAuthResponse> login(@Valid @RequestBody GuestLoginRequest request) {
+   return ResponseEntity.status(HttpStatus.CREATED).body(response(auth.login(request.email(),request.password())));
+ }
  private GuestAuthResponse response(GuestTokenPair p){return new GuestAuthResponse(p.accessToken(),p.refreshToken(),p.accessTokenExpiresInSeconds());}
 }

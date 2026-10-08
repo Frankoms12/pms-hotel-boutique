@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Fixtures dev-only para los modulos WEB-3 (rooms, housekeeping, maintenance,
  * concierge, parking-valet, messaging, companies, agencies, groups,
  * integrations, reports).
@@ -8,7 +8,7 @@
 
 import { http, HttpResponse } from "msw";
 
-import type { RoomListDto } from "@/modules/rooms/dtos/room.dto";
+import { operationalRoomFixture } from "./staff-room-catalog";
 import type { RoomStatusChangeRequestDto, RoomStatusChangeResultDto } from "@/modules/rooms/dtos/room-status-change.dto";
 import type { RoomCleaningListDto } from "@/modules/housekeeping/dtos/room-cleaning.dto";
 import type {
@@ -34,20 +34,6 @@ import type { PropertyReportListDto } from "@/modules/reports/dtos/property-repo
 
 const BASE = "http://pms.test";
 
-const mockRooms: RoomListDto = {
-  rooms: [
-    { room_id: "ROOM-101", property_id: "GT-HB-01", number: "101", floor: "1", status: "ACTIVE", room_type_label: "Estandar Doble" },
-    { room_id: "ROOM-102", property_id: "GT-HB-01", number: "102", floor: "1", status: "ACTIVE", room_type_label: "Estandar Doble" },
-    { room_id: "ROOM-103", property_id: "GT-HB-01", number: "103", floor: "1", status: "OOO", room_type_label: "Estandar Doble" },
-    { room_id: "ROOM-201", property_id: "GT-HB-01", number: "201", floor: "2", status: "ACTIVE", room_type_label: "Deluxe King" },
-    { room_id: "ROOM-202", property_id: "GT-HB-01", number: "202", floor: "2", status: "ACTIVE", room_type_label: "Deluxe King" },
-    { room_id: "ROOM-203", property_id: "GT-HB-01", number: "203", floor: "2", status: "ACTIVE", room_type_label: "Deluxe King" },
-    { room_id: "ROOM-204", property_id: "GT-HB-01", number: "204", floor: "2", status: "OOS", room_type_label: "Deluxe King" },
-    { room_id: "ROOM-301", property_id: "GT-HB-01", number: "301", floor: "3", status: "ACTIVE", room_type_label: "Suite Jardin" },
-    { room_id: "ROOM-302", property_id: "GT-HB-01", number: "302", floor: "3", status: "ACTIVE", room_type_label: "Suite Jardin" },
-    { room_id: "ROOM-401", property_id: "GT-HB-01", number: "401", floor: "4", status: "ACTIVE", room_type_label: "Master Suite Presidencial" },
-  ],
-};
 
 const mockRoomCleaning: RoomCleaningListDto = {
   rooms: [
@@ -198,7 +184,8 @@ function handleListRooms({ request }: { request: Request }) {
   if (propertyId === "error_property") {
     return HttpResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
-  return HttpResponse.json(mockRooms);
+  if (!propertyId) return new HttpResponse(null, { status: 400 });
+  return HttpResponse.json({ rooms: operationalRoomFixture(propertyId) });
 }
 
 function handleListRoomCleaning({ request }: { request: Request }) {
@@ -363,7 +350,9 @@ function handleRoomStatusChange({ params, request }: { params: { roomId?: string
   return (async () => {
     const roomId = String(params.roomId);
     const body = (await request.json()) as RoomStatusChangeRequestDto;
-    const room = mockRooms.rooms.find((entry) => entry.room_id === roomId);
+    const propertyId = new URL(request.url).searchParams.get("propertyId");
+    if (!propertyId) return new HttpResponse(null, { status: 400 });
+    const room = operationalRoomFixture(propertyId).find((entry) => entry.room_id === roomId);
 
     if (!room) {
       return HttpResponse.json({ error: "ROOM_NOT_FOUND" }, { status: 404 });

@@ -6,7 +6,7 @@ export interface Room {
   id: string;
   propertyId: string;
   number: string;
-  floor: string;
+  floor: string | null;
   status: RoomStatus;
   roomTypeLabel: string;
 }

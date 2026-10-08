@@ -14,6 +14,9 @@ const DTO = {
 };
 
 describe("mapRoom", () => {
+  it('keeps an explicitly unknown floor as null without guessing from the room number', () => {
+    expect(mapRoom({ ...DTO, floor: null })).toMatchObject({ number: '101', floor: null });
+  });
   it("maps and normalizes a provisional room DTO", () => {
     expect(mapRoom(DTO)).toEqual({
       id: "RM-101",

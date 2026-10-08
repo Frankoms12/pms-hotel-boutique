@@ -1,13 +1,16 @@
 package com.pms.hotelboutique.backend.modules.reservations;
 
 import com.pms.hotelboutique.backend.modules.reservations.application.CreateReservationCommand;
+import com.pms.hotelboutique.backend.modules.reservations.application.CreateStayCommand;
 import com.pms.hotelboutique.backend.modules.reservations.application.FolioService;
 import com.pms.hotelboutique.backend.modules.reservations.application.FolioView;
 import com.pms.hotelboutique.backend.modules.reservations.application.ReservationQueryException;
 import com.pms.hotelboutique.backend.modules.reservations.application.ReservationQueryService;
 import com.pms.hotelboutique.backend.modules.reservations.application.ReservationService;
+import com.pms.hotelboutique.backend.modules.reservations.application.ReservationStayService;
 import com.pms.hotelboutique.backend.modules.reservations.application.ReservationView;
 import com.pms.hotelboutique.backend.modules.securityauth.application.AuthorizedPropertyScope;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -35,12 +38,17 @@ class ReservationQueryServiceIntegrationTests {
     ReservationService reservations;
 
     @Autowired
+    ReservationStayService stays;
+
+    @Autowired
     FolioService folios;
 
     @Autowired
     JdbcTemplate jdbc;
 
     private UUID otherProperty;
+    private UUID seedRoomType;
+    private UUID otherRoomType;
     private ReservationView seedReservation;
     private ReservationView otherReservation;
 
@@ -57,16 +65,23 @@ class ReservationQueryServiceIntegrationTests {
     @BeforeEach
     void fixtures() {
         otherProperty = UUID.randomUUID();
-        UUID organization = UUID.randomUUID();
-        jdbc.update("INSERT INTO organizations(id,name,code,status,created_at,updated_at)"
-                + " VALUES (?,'Other Org',?,'ACTIVE',now(),now())", organization, organization.toString());
+        seedRoomType = UUID.randomUUID();
+        otherRoomType = UUID.randomUUID();
         jdbc.update("INSERT INTO properties(id,organization_id,name,code,timezone,currency,status,created_at,updated_at)"
                 + " VALUES (?,?,'Other',?,'America/Guatemala','GTQ','ACTIVE',now(),now())",
-                otherProperty, organization, otherProperty.toString());
+                otherProperty, ORGANIZATION, otherProperty.toString());
+        jdbc.update("INSERT INTO room_types(id,property_id,code,name) VALUES (?,?,'SEED','Seed')",
+                seedRoomType, SEED_PROPERTY);
+        jdbc.update("INSERT INTO room_types(id,property_id,code,name) VALUES (?,?,'OTHER','Other')",
+                otherRoomType, otherProperty);
         seedReservation = reservations.create(new CreateReservationCommand(
                 SEED_PROPERTY, null, "GTQ", "WEB_DIRECTA", null, null));
         otherReservation = reservations.create(new CreateReservationCommand(
                 otherProperty, null, "GTQ", "WEB_DIRECTA", null, null));
+        stays.addStay(new CreateStayCommand(seedReservation.id(), seedRoomType, null,
+                LocalDate.parse("2026-11-01"), LocalDate.parse("2026-11-02")));
+        stays.addStay(new CreateStayCommand(otherReservation.id(), otherRoomType, null,
+                LocalDate.parse("2026-11-01"), LocalDate.parse("2026-11-02")));
         folios.openFolio(new FolioService.OpenFolioCommand(
                 otherProperty, com.pms.hotelboutique.backend.modules.reservations.domain.Folio.Type.GUEST,
                 "GTQ", otherReservation.id(), null, null));
@@ -93,6 +108,8 @@ class ReservationQueryServiceIntegrationTests {
                 queries.getReservation(scope(otherProperty), otherReservation.id()).id());
         assertThrows(ReservationQueryException.class,
                 () -> queries.listStays(scope(SEED_PROPERTY), otherReservation.id()));
+        assertEquals(1, queries.listStays(scope(otherProperty), otherReservation.id()).size());
+        assertEquals(1, queries.listStays(scope(SEED_PROPERTY), seedReservation.id()).size());
     }
 
     @Test

@@ -40,7 +40,7 @@ Pruebas de dominio: importes y cantidades, moneda separada, cargos ausentes, sel
 
 Chrome: fotografías cargadas, CTA y stepper de cada paso, recorrido de ida/vuelta, acceso desde drawer y vacío tras reload; sin desbordamientos a 320, 390, 768, 1024 y 1440 px. Lint, TypeScript estricto, pruebas afectadas y build se ejecutan antes de cerrar.
 
-Para probar: `npm run dev -- --port 3000` en `frontend/pms-hotel-web` con la configuración mock local. Abrir `http://localhost:3000`, buscar fechas futuras, entrar al detalle y seleccionar. Cambiar USD/GTQ, revisar desglose, volver al catálogo o continuar a datos. No abrir `/reserva` como primera entrada esperando una habitación preseleccionada.
+Para probar: `npm run dev -- --port 3000` en `frontend/pms-hotel-web` con la configuración mock local. Abrir `http://localhost:3001`, buscar fechas futuras, entrar al detalle y seleccionar. Cambiar USD/GTQ, revisar desglose, volver al catálogo o continuar a datos. No abrir `/reserva` como primera entrada esperando una habitación preseleccionada.
 
 Resultado local final: 17 archivos de prueba, 153 tests PASS; lint, TypeScript
 estricto, build y Chrome PASS; `git diff --check` sin errores. Un primer recorrido

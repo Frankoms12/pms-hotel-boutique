@@ -17,6 +17,8 @@ public interface ReservationQueryService {
 
     ReservationView getReservation(AuthorizedPropertyScope scope, UUID reservationId);
 
+    ResponsibleGuestView getResponsibleGuest(AuthorizedPropertyScope scope, UUID reservationId);
+
     List<ReservationStayView> listStays(AuthorizedPropertyScope scope, UUID reservationId);
 
     List<FolioView> listFolios(AuthorizedPropertyScope scope);

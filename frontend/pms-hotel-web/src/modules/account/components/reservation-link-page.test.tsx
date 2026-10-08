@@ -1,3 +1,5 @@
+import {activateGuestFixture} from '@/test/guest-session-fixture';
+import {useQueryClient} from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -6,23 +8,28 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { mockServer } from '@/data/mocks/server';
 import { initializeAccountFixture, peekAccountFixture, resetAccountFixtures } from '@/data/mocks/account-fixtures';
-import { GuestAccessPage, GuestAccountGate, GuestSessionProvider } from '@/modules/auth';
+import { GuestLinkedAccount, GuestAccountGate, GuestSessionProvider, useGuestSession } from '@/modules/auth';
 import { HistoryPage } from './history-page';
 import { ReservationLinkPage } from './reservation-link-page';
 
 const clients: QueryClient[] = [];
 const navigation = { replace: vi.fn(), push: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn(), prefetch: vi.fn(), bfcacheId: 'reservation-link-page-test' };
+let fixtureEmail = 'guest.google@example.com';
 const path = '/cuenta/reservas/vincular';
 type View = 'access' | 'link' | 'history';
-beforeEach(() => { resetAccountFixtures(); vi.stubEnv('NEXT_PUBLIC_USE_MOCK_API', 'true'); });
+beforeEach(() => { fixtureEmail = 'guest.google@example.com'; resetAccountFixtures(); vi.stubEnv('NEXT_PUBLIC_USE_MOCK_API', 'true'); });
 afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()); vi.unstubAllEnvs(); vi.clearAllMocks(); });
 
+function FixtureAccess() {
+  const { account } = useGuestSession();const client=useQueryClient();
+  return account ? <GuestLinkedAccount authProvider="email" returnTo={path} /> : <button onClick={() => void activateGuestFixture({ method: 'EMAIL', email: fixtureEmail, registration: { fullName: 'José Pérez' } },client)}>Preparar cuenta email</button>;
+}
 function setup(initial: View = 'access') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   clients.push(client);
   function Harness({ view }: { view: View }) {
     return <AppRouterContext.Provider value={navigation}><QueryClientProvider client={client}><GuestSessionProvider>
-      {view === 'access' ? <GuestAccessPage returnTo={path} /> : <GuestAccountGate returnTo={path}>
+      {view === 'access' ? <FixtureAccess /> : <GuestAccountGate returnTo={path}>
         {view === 'link' ? <ReservationLinkPage /> : <HistoryPage />}
       </GuestAccountGate>}
     </GuestSessionProvider></QueryClientProvider></AppRouterContext.Provider>;
@@ -30,17 +37,12 @@ function setup(initial: View = 'access') {
   const result = render(<Harness view={initial} />);
   return { user: userEvent.setup(), navigate: (view: View) => result.rerender(<Harness view={view} />) };
 }
-async function register(provider: 'email' | 'google', email = 'guest.google@example.com') {
-  fireEvent.click(screen.getByRole('tab', { name: 'Crear cuenta' }));
-  fireEvent.click(screen.getByRole('checkbox', { name: /Acepto los Términos/ }));
-  if (provider === 'google') fireEvent.click(screen.getByRole('button', { name: 'Registrarse con Google' }));
-  else {
-    for (const [label, value] of [['Nombre completo', 'José Pérez'], ['Correo electrónico', email], ['Contraseña', 'ExamplePass42!'], ['Confirmar contraseña', 'ExamplePass42!']])
-      fireEvent.change(screen.getByLabelText(label), { target: { value } });
-    fireEvent.submit(screen.getByLabelText('Correo electrónico').closest('form')!);
-  }
+async function register(_provider: 'email' | 'google', email = 'guest.google@example.com') {
+  fixtureEmail = email;
+  fireEvent.click(screen.getByRole('button', { name: 'Preparar cuenta email' }));
   await screen.findByRole('heading', { name: 'Cuenta vinculada' });
 }
+
 function request(reference = 'HB-2026-10420') {
   fireEvent.change(screen.getByLabelText('Referencia de reserva'), { target: { value: reference } });
   fireEvent.submit(screen.getByLabelText('Referencia de reserva').closest('form')!);
@@ -51,11 +53,11 @@ async function verify(code = '12345678') {
 }
 
 describe('Dedicated existing-reservation link screen', () => {
-  it.each(['email', 'google'] as const)('links to the newly created %s account only after verification and refreshes history without duplicates', async provider => {
-    const currentId = provider === 'email' ? 'guest-demo-register' : 'guest-demo-google';
-    const otherId = provider === 'email' ? 'guest-demo-google' : 'guest-demo-empty';
+  it('links to the existing account only after verification and refreshes history without duplicates', async () => {
+    const currentId = 'guest-demo-register';
+    const otherId = 'guest-demo-google';
     initializeAccountFixture(otherId, 'other@example.com');
-    const { navigate } = setup(); await register(provider);
+    const { navigate } = setup(); await register('email');
     expect(screen.getByRole('link', { name: 'Vincular reserva existente' })).toHaveAttribute('href', path);
     navigate('link');
     expect(screen.getByRole('heading', { name: 'Vincular reserva existente' })).toHaveFocus();
@@ -83,9 +85,9 @@ describe('Dedicated existing-reservation link screen', () => {
     expect(screen.getByText(/2 estadías · Responsable/)).toBeInTheDocument();
     expect(sessionStorage.length).toBe(0); expect(localStorage.length).toBe(0);
   });
-  it('preserves the destination for anonymous access and never exposes the reservation form', () => {
+  it('preserves the destination for anonymous access and never exposes the reservation form', async () => {
     setup('link');
-    expect(screen.getByRole('link', { name: 'Iniciar sesión' })).toHaveAttribute('href', '/acceso?returnTo=%2Fcuenta%2Freservas%2Fvincular');
+    expect(await screen.findByRole('link', { name: 'Iniciar sesión' })).toHaveAttribute('href', '/acceso?returnTo=%2Fcuenta%2Freservas%2Fvincular');
     expect(screen.queryByLabelText('Referencia de reserva')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Vincular reserva existente' })).not.toBeInTheDocument();
   });

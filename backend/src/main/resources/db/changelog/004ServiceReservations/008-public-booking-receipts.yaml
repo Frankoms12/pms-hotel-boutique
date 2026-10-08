@@ -1,0 +1,79 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-reservations-008
+      author: juan-bd3
+      changes:
+        - createTable:
+            tableName: public_booking_receipts
+            columns:
+              - column: { name: idempotency_key, type: varchar(128), constraints: { primaryKey: true, primaryKeyName: pk_public_booking_receipts, nullable: false } }
+              - column: { name: request_hash, type: varchar(64), constraints: { nullable: false } }
+              - column: { name: status, type: varchar(16), constraints: { nullable: false } }
+              - column: { name: reservation_id, type: uuid, constraints: { nullable: false, foreignKeyName: fk_public_booking_receipts_reservation, references: reservations(id) } }
+              - column: { name: confirmation_code, type: varchar(16), constraints: { nullable: false } }
+              - column: { name: payment_reference, type: text, constraints: { nullable: false } }
+              - column: { name: response_snapshot, type: jsonb, constraints: { nullable: false } }
+              - column: { name: created_at, type: timestamptz, constraints: { nullable: false } }
+              - column: { name: updated_at, type: timestamptz, constraints: { nullable: false } }
+        - sql:
+            dbms: postgresql
+            sql: |
+              ALTER TABLE public_booking_receipts ALTER COLUMN idempotency_key TYPE varchar(128) COLLATE "C";
+              ALTER TABLE public_booking_receipts
+                ADD CONSTRAINT ck_public_booking_receipts_key CHECK (char_length(idempotency_key) BETWEEN 8 AND 128 AND btrim(idempotency_key) <> '' AND idempotency_key !~ '[[:cntrl:]]'),
+                ADD CONSTRAINT ck_public_booking_receipts_hash CHECK (request_hash ~ '^[0-9a-f]{64}$'),
+                ADD CONSTRAINT ck_public_booking_receipts_status CHECK (status = 'COMPLETED'),
+                ADD CONSTRAINT ck_public_booking_receipts_confirmation CHECK (btrim(confirmation_code) <> ''),
+                ADD CONSTRAINT ck_public_booking_receipts_reference CHECK (btrim(payment_reference) <> ''),
+                ADD CONSTRAINT ck_public_booking_receipts_time CHECK (updated_at = created_at);
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              CREATE FUNCTION public_booking_snapshot_has_response_fields(snapshot jsonb) RETURNS boolean
+              LANGUAGE plpgsql IMMUTABLE STRICT AS $$
+              DECLARE
+                root_fields text[] := ARRAY['reservationId','confirmationCode','status','currency','totalMinor','payment','stays'];
+                payment_fields text[] := ARRAY['provider','status','reference'];
+                stay_fields text[] := ARRAY['reservationStayId','roomTypeId','roomId','arrival','departure'];
+                stay jsonb;
+              BEGIN
+                IF jsonb_typeof(snapshot) IS DISTINCT FROM 'object' THEN RETURN false; END IF;
+                IF NOT (snapshot ?& root_fields) OR snapshot - root_fields <> '{}'::jsonb THEN RETURN false; END IF;
+                IF jsonb_typeof(snapshot->'payment') IS DISTINCT FROM 'object' THEN RETURN false; END IF;
+                IF NOT ((snapshot->'payment') ?& payment_fields) OR (snapshot->'payment') - payment_fields <> '{}'::jsonb THEN RETURN false; END IF;
+                IF jsonb_typeof(snapshot->'stays') IS DISTINCT FROM 'array' THEN RETURN false; END IF;
+                IF jsonb_array_length(snapshot->'stays') = 0 THEN RETURN false; END IF;
+                FOR stay IN SELECT value FROM jsonb_array_elements(snapshot->'stays') LOOP
+                  IF jsonb_typeof(stay) IS DISTINCT FROM 'object' THEN RETURN false; END IF;
+                  IF NOT (stay ?& stay_fields) OR stay - stay_fields <> '{}'::jsonb THEN RETURN false; END IF;
+                END LOOP;
+                RETURN true;
+              END; $$;
+        - sql:
+            dbms: postgresql
+            sql: |
+              ALTER TABLE public_booking_receipts
+                ADD CONSTRAINT ck_public_booking_receipts_snapshot_fields CHECK (public_booking_snapshot_has_response_fields(response_snapshot)),
+                ADD CONSTRAINT ck_public_booking_receipts_snapshot_identity CHECK (COALESCE(
+                  lower(response_snapshot->>'reservationId') = reservation_id::text
+                  AND response_snapshot->>'confirmationCode' = confirmation_code
+                  AND response_snapshot->'payment'->>'reference' = payment_reference, false));
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              CREATE FUNCTION public_booking_reject_receipt_mutation() RETURNS trigger LANGUAGE plpgsql AS $$
+              BEGIN
+                RAISE EXCEPTION 'public_booking_receipts is append-only';
+              END; $$;
+        - sql:
+            dbms: postgresql
+            sql: |
+              CREATE TRIGGER trg_public_booking_receipts_append_only
+              BEFORE UPDATE OR DELETE ON public_booking_receipts
+              FOR EACH ROW EXECUTE FUNCTION public_booking_reject_receipt_mutation();
+      rollback:
+        - dropTable: { tableName: public_booking_receipts }
+        - sql: { sql: 'DROP FUNCTION public_booking_reject_receipt_mutation()' }
+        - sql: { sql: 'DROP FUNCTION public_booking_snapshot_has_response_fields(jsonb)' }

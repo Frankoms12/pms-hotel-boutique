@@ -93,16 +93,23 @@ describe('Public payment and guarantee journey', () => {
     const view = await prepared(); const summary = screen.getByRole('complementary');
     expect(summary).toHaveTextContent('US$ 505.00'); expect(summary).toHaveTextContent('US$ 168.33'); expect(summary).toHaveTextContent('US$ 336.67');
     expect(screen.getByRole('link', { name: '← Volver a revisión' })).toHaveAttribute('href', expect.stringContaining('checkIn=2026-10-10'));
+    expect(sessionStorage.getItem('pms:public-cart:v1:mock')).not.toBeNull();
+    const removal = vi.spyOn(sessionStorage, 'removeItem');
     confirm(); await screen.findByRole('button', { name: /Procesando garantía/ }); expect(screen.getByRole('button', { name: /Procesando garantía/ })).toBeDisabled();
     await waitFor(() => expect(push).toHaveBeenCalledTimes(1), { timeout: 3000 }); expect(push).toHaveBeenCalledWith(expect.stringContaining('/reserva/confirmacion?checkIn=2026-10-10'));
+    expect(sessionStorage.getItem('pms:public-cart:v1:mock')).toBeNull();
+    expect(removal.mock.calls.filter(([key]) => key === 'pms:public-cart:v1:mock')).toHaveLength(1);
     view.rerender(<PublicBookingConfirmationPage initialCriteria={criteria}/>); expect(screen.getByRole('heading', { name: 'HB-2026-8942' })).toBeInTheDocument(); expect(screen.getByText('Abono confirmado')).toBeInTheDocument(); expect(screen.queryByText(/Sin débito real/)).not.toBeInTheDocument();
     view.rerender(<PublicPaymentReviewPage initialCriteria={criteria}/>); expect(await screen.findByText('Tu reserva ya está confirmada')).toBeInTheDocument(); expect(screen.queryByRole('button', { name: 'Garantizar y confirmar reserva' })).not.toBeInTheDocument();
     expect(localStorage.length).toBe(0); expect(JSON.stringify(sessionStorage.getItem('pms:public-cart:v1:real') ?? sessionStorage.getItem('pms:public-cart:v1:mock'))).not.toMatch(/guest@example|Carlos|DOC-DEMO/);
   });
   it('recovers from declined cards and provider errors and preserves the same guest data', async () => {
     const view = await prepared();
+    const cartBefore = sessionStorage.getItem('pms:public-cart:v1:mock');
+    expect(cartBefore).not.toBeNull();
     for (const [token, message] of [['demo_card_declined', /rechazada/], ['demo_gateway_error', /no está disponible/]] as const) {
       fireEvent.change(screen.getByLabelText('Resultado de demostración'), { target: { value: token } }); confirm(); await waitFor(() => expect(push).toHaveBeenCalledWith(expect.stringContaining('/reserva/error?')), { timeout: 3000 });
+      expect(sessionStorage.getItem('pms:public-cart:v1:mock')).toBe(cartBefore);
       view.rerender(<PublicBookingResultPage initialCriteria={criteria} status="error"/>); expect(screen.getByRole('heading', { name: 'No pudimos completar tu reserva' })).toBeInTheDocument(); expect(screen.getByRole('alert')).toHaveTextContent(message); expect(screen.getByText('Carlos Mendoza')).toBeInTheDocument(); expect(screen.getByText('guest@example.com')).toBeInTheDocument(); expect(screen.getByRole('link', { name: 'Reintentar pago con otra tarjeta' })).toHaveAttribute('href', expect.stringContaining('/checkout/pago?checkIn=2026-10-10'));
       view.rerender(<PublicBookingConfirmationPage initialCriteria={criteria}/>); expect(screen.getByRole('region', { name: 'No hay una confirmación en esta sesión' })).toBeInTheDocument();
       push.mockClear(); view.rerender(<PublicPaymentReviewPage initialCriteria={criteria}/>); await screen.findByRole('button', { name: 'Garantizar y confirmar reserva' });
@@ -149,6 +156,9 @@ describe('Public payment and guarantee journey', () => {
   });
   it('retains the same key and card after a lost response across the error/payment navigation', async () => {
     const view = await prepared(); fireEvent.click(screen.getByRole('button', { name: /50% de la estadía/ })); fireEvent.change(screen.getByLabelText('Resultado de demostración'), { target: { value: 'demo_mastercard_approved' } });
+    const cartBefore = sessionStorage.getItem('pms:public-cart:v1:mock');
+    expect(cartBefore).not.toBeNull();
+    const removal = vi.spyOn(sessionStorage, 'removeItem');
     const originalFetch = globalThis.fetch; const keys: string[] = []; const bodies: string[] = []; let lost = false;
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, options) => {
       const booking = String(input).includes('/__mock/checkout/confirmations');
@@ -158,8 +168,12 @@ describe('Public payment and guarantee journey', () => {
       return response;
     });
     confirm(); await waitFor(() => expect(push).toHaveBeenCalledWith(expect.stringContaining('/reserva/error?')), { timeout: 3000 }); view.rerender(<PublicBookingResultPage initialCriteria={criteria} status="error"/>); expect(screen.getByRole('link', { name: 'Reintentar verificación con la misma tarjeta' })).toBeInTheDocument(); expect(screen.getByRole('button', { name: 'Modificar fechas o habitación' })).toBeDisabled();
+    expect(sessionStorage.getItem('pms:public-cart:v1:mock')).toBe(cartBefore);
+    expect(removal.mock.calls.filter(([key]) => key === 'pms:public-cart:v1:mock')).toHaveLength(0);
     push.mockClear(); view.rerender(<PublicPaymentReviewPage initialCriteria={criteria}/>); await screen.findByRole('button', { name: 'Garantizar y confirmar reserva' }); expect(screen.getByLabelText('Resultado de demostración')).toHaveValue('demo_mastercard_approved'); expect(screen.getByLabelText('Resultado de demostración')).toBeDisabled(); expect(screen.getByRole('button', { name: /50% de la estadía/ })).toHaveAttribute('aria-pressed', 'true'); expect(screen.getByRole('button', { name: 'Personalizado' })).toBeDisabled(); expect(screen.getByRole('complementary')).toHaveTextContent('US$ 252.50');
     confirm(); await waitFor(() => expect(push).toHaveBeenCalledWith(expect.stringContaining('/reserva/confirmacion?')), { timeout: 3000 }); expect(keys).toHaveLength(2); expect(keys[1]).toBe(keys[0]); expect(bodies[1]).toBe(bodies[0]);
+    expect(sessionStorage.getItem('pms:public-cart:v1:mock')).toBeNull();
+    expect(removal.mock.calls.filter(([key]) => key === 'pms:public-cart:v1:mock')).toHaveLength(1);
     view.rerender(<PublicBookingConfirmationPage initialCriteria={criteria}/>); expect(screen.getByRole('heading', { name: 'HB-2026-8942' })).toBeInTheDocument();
   }, 10000);
   it('clears checkout and cart on the home action while keeping the currency preference', async () => {

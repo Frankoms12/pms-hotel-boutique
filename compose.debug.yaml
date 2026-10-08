@@ -1,0 +1,5 @@
+# Explicit local tooling only. Normal integrated QA uses compose.yaml alone.
+services:
+  backend:
+    ports:
+      - "127.0.0.1:8081:8080"

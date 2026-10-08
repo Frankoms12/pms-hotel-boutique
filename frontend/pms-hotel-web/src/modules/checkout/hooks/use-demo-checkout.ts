@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { onlineManager } from '@tanstack/react-query';
 import { getPublicEnvironment } from '@/lib/env';
 import { HttpNetworkError, HttpStatusError } from '@/lib/http/errors';
-import { publicResultsHref, resolveSelection, type BookingSearchCriteria } from '@/modules/booking';
+import { useResetPublicBooking, publicResultsHref, resolveSelection, type BookingSearchCriteria } from '@/modules/booking';
 import type { DemoCardToken } from '@/modules/payments';
 import { confirmDemoBooking } from '@/modules/reservations';
 import { paymentEstimate, quoteFingerprint } from '../domain/payment-estimate';
@@ -21,6 +21,7 @@ export const failureHref = (criteria: Partial<BookingSearchCriteria>) => publicR
 export function useDemoCheckout(review: BookingReview, criteria: Partial<BookingSearchCriteria>, card: DemoCardToken | null) {
   const draft = useCheckoutDraft(review.scope);
   const router = useRouter();
+  const clearCart = useResetPublicBooking();
   const [phase, setPhase] = useState<'idle' | 'checking' | 'processing' | 'done'>('idle');
   const [error, setError] = useState('');
   const active = useRef<AbortController | null>(null);
@@ -49,7 +50,8 @@ export function useDemoCheckout(review: BookingReview, criteria: Partial<Booking
       sent = true;
       const confirmation = await confirmDemoBooking({ ...payload, idempotencyKey: key }, controller.signal);
       if (controller.signal.aborted) return;
-      draft.complete(review.selectionKey, confirmation); setPhase('done');
+      if (draft.complete(review.selectionKey, confirmation)) clearCart();
+      setPhase('done');
       router.push(confirmationHref(criteria));
     } catch (problem) {
       if (!controller.signal.aborted) {

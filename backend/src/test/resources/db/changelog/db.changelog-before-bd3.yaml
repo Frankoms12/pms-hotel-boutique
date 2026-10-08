@@ -1,7 +1,7 @@
 # Exact pre-BD3 includes, used only to test upgrading an existing schema.
 databaseChangeLog:
   - include:
-      file: db/changelog/002ServiceManagement/db.changelog.yaml
+      file: db/changelog/002ServiceManagement/001-organization-property.yaml
   - include:
       file: db/changelog/003ServiceSecurityAuth/001-staff-auth-schema.yaml
   - include:

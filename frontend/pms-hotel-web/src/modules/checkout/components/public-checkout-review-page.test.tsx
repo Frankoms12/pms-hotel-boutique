@@ -32,7 +32,7 @@ async function prepared(multiple = false, requests = '') {
 }
 describe('Final checkout review', () => {
   it('shows captured guest, stay, four steps and the complete quote without mutations', async () => {
-    const writes = vi.fn(); mockServer.use(http.post('*', () => { writes(); return HttpResponse.json({}); }));
+    const writes = vi.fn(); mockServer.use(http.post('*', ({request}) => { if(new URL(request.url).pathname==='/api/auth/guest/refresh')return new HttpResponse(null,{status:401});writes();return HttpResponse.json({}); }));
     await prepared(false, 'Llegada tardía después de las 20:00 h');
     expect(screen.getByRole('heading', { name: 'Revisa y confirma tu reserva' })).toBeInTheDocument();
     const steps = within(screen.getByRole('navigation', { name: 'Pasos de la reserva' })).getAllByRole('listitem');

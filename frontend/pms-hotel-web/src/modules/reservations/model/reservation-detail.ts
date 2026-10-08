@@ -8,8 +8,8 @@ export type StayTravelState = "RESERVED" | "IN_HOUSE" | "CHECKED_OUT" | "CANCELL
 /** Una estadía dentro de la Reservation. Multi-room => múltiples estadías con Stay ID propio. */
 export interface ReservationStayDetail {
   id: string;
-  roomId: string;
-  roomLabel: string;
+  roomId: string | null;
+  roomLabel: string | null;
   roomType: string;
   checkIn: Date;
   checkOut: Date;
@@ -18,9 +18,10 @@ export interface ReservationStayDetail {
 }
 
 export interface ReservationGuestSummary {
-  primaryName: string;
+  profileId?: string;
+  primaryName: string | null;
   phone: string | null;
-  adults: number;
+  adults: number | null;
   children: number | null;
 }
 
@@ -31,23 +32,25 @@ export interface ReservationFinanceLine {
 
 export interface ReservationDetailFinancialSummary extends ReservationFinancialSummary {
   /** Tarifa por noche del rate plan confirmado. */
-  ratePerNight: number;
+  ratePerNight: number | null;
   /** Desglose resumido: alojamiento, impuestos, servicio. No sustituye al Folio. */
   lines: ReservationFinanceLine[];
 }
 
 export interface ReservationSource {
-  label: string;
+  label: string | null;
   reference: string | null;
 }
 
 export interface ReservationDetailData {
+  readOnly?: boolean;
+  confirmationCode?: string;
   id: string;
   propertyId: string;
   status: ReservationStatus;
   createdAt: Date;
   source: ReservationSource;
-  policyLabel: string;
+  policyLabel: string | null;
   guest: ReservationGuestSummary;
   stays: ReservationStayDetail[];
   notes: string | null;

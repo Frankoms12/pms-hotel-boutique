@@ -24,13 +24,16 @@ public class NightAuditServiceImpl implements NightAuditService {
     private final BusinessDayRepository days;
     private final NightAuditRunRepository runs;
     private final List<NightAuditBlocker> blockers;
+    private final NightAuditBlockedRunRecorder blockedRuns;
     private final AuditService audit;
 
     public NightAuditServiceImpl(BusinessDayRepository days, NightAuditRunRepository runs,
-            List<NightAuditBlocker> blockers, AuditService audit) {
+            List<NightAuditBlocker> blockers, NightAuditBlockedRunRecorder blockedRuns,
+            AuditService audit) {
         this.days = days;
         this.runs = runs;
         this.blockers = blockers;
+        this.blockedRuns = blockedRuns;
         this.audit = audit;
     }
 
@@ -65,8 +68,6 @@ public class NightAuditServiceImpl implements NightAuditService {
     public CloseDayResult closeDay(UUID propertyId, UUID actorId) {
         BusinessDay open = openDayOf(propertyId);
         Instant now = Instant.now();
-        NightAuditRun run =
-                runs.save(new NightAuditRun(UUID.randomUUID(), propertyId, open.getId(), actorId, now));
 
         List<String> found = new ArrayList<>();
         for (NightAuditBlocker blocker : blockers) {
@@ -78,11 +79,13 @@ public class NightAuditServiceImpl implements NightAuditService {
             }
         }
         if (!found.isEmpty()) {
-            run.block(String.join(" | ", found), now);
-            record(open.getId(), propertyId, "NIGHT_AUDIT_BLOCKED",
-                    "{\"date\":\"" + open.getBusinessDate() + "\"}", null, actorId, null);
+            String reason = String.join(" | ", found);
+            blockedRuns.record(propertyId, open.getId(), open.getBusinessDate(), actorId,
+                    reason, now);
             throw new NightAuditException("close blocked: " + String.join("; ", found));
         }
+        NightAuditRun run =
+                runs.save(new NightAuditRun(UUID.randomUUID(), propertyId, open.getId(), actorId, now));
         open.close(actorId, now);
         // Flush the close first: the partial unique index on OPEN days would
         // otherwise see the old and the successor rows as duplicates.

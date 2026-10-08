@@ -15,7 +15,7 @@ export function mapRoom(dto: RoomDto): Room {
     id: requiredText(dto.room_id, "INVALID_ROOM_ID"),
     propertyId: requiredText(dto.property_id, "INVALID_ROOM_PROPERTY_ID"),
     number: requiredText(dto.number, "INVALID_ROOM_NUMBER"),
-    floor: requiredText(dto.floor, "INVALID_ROOM_FLOOR"),
+    floor: dto.floor === null ? null : requiredText(dto.floor, "INVALID_ROOM_FLOOR"),
     status,
     roomTypeLabel: requiredText(dto.room_type_label, "INVALID_ROOM_TYPE_LABEL"),
   };

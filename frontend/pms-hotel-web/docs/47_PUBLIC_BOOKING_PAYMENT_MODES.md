@@ -1,5 +1,9 @@
 # Public 01 — Paso 4: modalidades y validación de tarjeta
 
+Integración real vigente: [submit J6](52_PUBLIC_BOOKING_J6_SUBMIT.md). Las
+modalidades parciales y tarjeta de prueba siguen disponibles solo en modo
+mock; el submit real usa SIMULATED_CARD por el total GTQ.
+
 Actualización de presentación: [textos finales para clientes](48_PUBLIC_BOOKING_CUSTOMER_COPY.md). Los controles de simulación ya no se muestran en rutas públicas; los límites técnicos descritos aquí se conservan.
 
 ## Alcance autorizado

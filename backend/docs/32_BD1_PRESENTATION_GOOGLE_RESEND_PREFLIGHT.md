@@ -64,9 +64,9 @@ el flujo Guest.
 
    Comparar el callback público literalmente con la URI autorizada en Google.
 4. Abrir el host Web, `GET /api/auth/guest/session` sin cookies debe devolver
-   `401`. El cliente de la aplicación usa Web/BFF; Backend/Swagger se publica
-   solo en localhost para QA local mediante PMS_BACKEND_PORT. El puerto no cambia
-   el destino interno backend:8080. [Guía integrada](../../docs/13_LOCAL_INTEGRATED_STACK.md).
+   `401`. El cliente de la aplicación usa Web/BFF; Backend/PostgreSQL permanecen
+   internos. Swagger/debug requiere compose.debug.yaml explícito, 127.0.0.1:8081;
+   el destino interno sigue backend:8080. Web canónico fijo localhost:3001. [Guía integrada](../../docs/13_LOCAL_INTEGRATED_STACK.md).
 
 ## Secuencia de aceptación BE-016B (pendiente de ejecución real)
 

@@ -31,6 +31,12 @@ services:
       GOOGLE_CLIENT_ID: ""
       GOOGLE_CLIENT_SECRET: ""
       GOOGLE_REDIRECT_URI: ""
+      PMS_EMAIL_PROVIDER: resend
+      PMS_SMTP_HOST: ""
+      PMS_SMTP_PORT: ""
+      PMS_SMTP_USERNAME: ""
+      PMS_SMTP_APP_PASSWORD: ""
+      PMS_SMTP_FROM: ""
       RESEND_API_KEY: ""
       RESEND_FROM_EMAIL: ""
     ports: !override

@@ -36,6 +36,6 @@ jobs:
       - uses: actions/checkout@v4
       - run: docker compose config --quiet
       - run: docker compose up --build --wait
-      - run: curl --fail --retry 5 http://localhost:3000
+      - run: curl --fail --retry 5 http://localhost:3001
       - if: always()
         run: docker compose down -v

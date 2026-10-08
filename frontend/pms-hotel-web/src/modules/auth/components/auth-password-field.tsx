@@ -12,7 +12,7 @@ export function AuthPasswordField({ id, label, value, onChange, onBlur, error, d
     <label htmlFor={id}>{label}</label>
     <div className={styles.passwordWrapper}>
       <input id={id} name={id} type={visible ? 'text' : 'password'} value={value} onChange={event => onChange(event.target.value)}
-        onBlur={onBlur} autoComplete={autoComplete} disabled={disabled} required maxLength={128}
+        onBlur={onBlur} autoComplete={autoComplete} disabled={disabled} required maxLength={50}
         aria-invalid={!!error} aria-describedby={[hintId, error ? `${id}-error` : undefined].filter(Boolean).join(' ') || undefined} />
       <button type="button" className={styles.eye} disabled={disabled} onClick={() => setVisible(!visible)}
         aria-label={`${visible ? 'Ocultar' : 'Mostrar'} ${label.toLowerCase()}`} aria-pressed={visible}>

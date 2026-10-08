@@ -70,6 +70,11 @@
   text-decoration: underline;
 }
 .stayAction:hover { color: var(--color-brand-primary); }
+.stayActions { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 14px; row-gap: 4px; }
+.assignAction { background: #5a6b5d; color: white; border: 0; border-radius: 10px; padding: 10px 14px; margin: 12px 0 0; min-height: 44px; font: inherit; cursor: pointer; }
+.assignAction:hover { background: #4a584c; }
+.assignAction:focus-visible { outline: 3px solid #a7b7a2; outline-offset: 3px; }
+.assignmentNotice { background: #e3e8e3; color: #2a362b; padding: 14px 18px; border-radius: 12px; line-height: 1.6; }
 .stayAction:focus-visible { outline: 3px solid var(--color-brand-accent); outline-offset: 2px; }
 
 .financeLines { list-style: none; margin: 0 0 var(--space-4); padding: 0; }

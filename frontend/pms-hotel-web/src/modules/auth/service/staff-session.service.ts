@@ -1,4 +1,5 @@
-import { HttpStatusError, httpRequest } from "@/lib/http";
+import { refreshStaffBffSession, staffBffRead } from "@/lib/http/staff-bff";
+import { httpRequest } from "@/lib/http";
 import type { StaffIdentityDTO, StaffSessionDTO } from "../dtos/staff-session.dto";
 
 function bffUrl(path: string): string {
@@ -10,22 +11,15 @@ export function getStaffIdentityDTO(signal?: AbortSignal): Promise<StaffIdentity
 }
 
 export function getStaffSessionDTO(signal?: AbortSignal): Promise<StaffSessionDTO> {
-  return httpRequest({ path: bffUrl("/api/auth/staff/session"), signal });
+  return httpRequest({ path: bffUrl("/api/auth/staff/session"), signal, withAuth: false });
 }
 
-export function refreshStaffSession(): Promise<{ refreshed: boolean }> {
-  return httpRequest({ path: bffUrl("/api/auth/staff/refresh"), method: "POST" });
-}
+export const refreshStaffSession = refreshStaffBffSession;
 
-export async function getActiveStaffSessionDTO(signal?: AbortSignal): Promise<StaffSessionDTO> {
-  try { return await getStaffSessionDTO(signal); }
-  catch (error) {
-    if (!(error instanceof HttpStatusError) || error.status !== 401) throw error;
-    await refreshStaffSession();
-    return getStaffSessionDTO(signal);
-  }
+export function getActiveStaffSessionDTO(signal?: AbortSignal): Promise<StaffSessionDTO> {
+  return staffBffRead('/api/auth/staff/session', signal);
 }
 
 export function logoutStaffSession(): Promise<void> {
-  return httpRequest<void>({ path: bffUrl("/api/auth/staff/session"), method: "DELETE" });
+  return httpRequest<void>({ path: bffUrl("/api/auth/staff/session"), method: "DELETE", withAuth: false });
 }

@@ -1,3 +1,5 @@
+import {activateGuestFixture} from '@/test/guest-session-fixture';
+import {useQueryClient} from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -13,8 +15,8 @@ const clients: QueryClient[] = [];
 beforeEach(() => { resetAccountFixtures(); replace.mockClear(); vi.stubEnv('NEXT_PUBLIC_USE_MOCK_API', 'true'); });
 afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()); onlineManager.setOnline(true); vi.unstubAllEnvs(); vi.useRealTimers(); });
 function DemoLogin({ email }: { email?: string }) {
-  const session = useGuestSession();
-  return <button onClick={() => void session.signIn(email ? { method: 'EMAIL', email } : { method: 'GOOGLE' })}>Entrar al demo</button>;
+  const session = useGuestSession();const client=useQueryClient();
+  return <button onClick={() => void activateGuestFixture(email ? { method: 'EMAIL', email } : { method: 'GOOGLE' },client)}>Entrar al demo</button>;
 }
 function mount(email?: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } } }); clients.push(client);

@@ -17,7 +17,8 @@ interface WaitlistBoardProps {
   endpoint?: string;
 }
 
-function formatShortDate(date: Date): string {
+function formatShortDate(date: Date | null): string {
+  if (date === null) return "—";
   return date.toLocaleDateString("es-GT", { day: "numeric", month: "short" }).replace(".", "");
 }
 

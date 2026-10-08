@@ -13,7 +13,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-/** Applies Staff authentication to property operations and commercial reporting. */
+/** Reuses Staff authentication for catalogs, commercial reports and reservation reads. */
 @Configuration
 public class InventorySecurityConfiguration {
     @Bean
@@ -26,7 +26,7 @@ public class InventorySecurityConfiguration {
                         "/api/v1/properties/*/room-types/*", "/api/v1/properties/*/rooms",
                         "/api/v1/properties/*/rooms/*", "/api/v1/properties/*/rate-plans",
                         "/api/v1/properties/*/rate-plans/*",
-                        "/api/v1/reports/on-books/daily")
+                        "/api/v1/reports/on-books/daily", "/api/v1/reservations", "/api/v1/reservations/*")
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(errors -> errors

@@ -3,8 +3,6 @@
  * Export only intentionally public Domain Models, hooks and components.
  */
 export type { ExternalIdentity, ExternalIdentityProvider, GuestAccount } from "./model/guest-account";
-export type { UserSession, LoginCredentials, UserRole } from "./model/session";
-export { useSession, type UseSessionResult } from "./hooks/use-session";
 export { GuestAccessPage } from "./components/guest-access-page";
 export { GuestLinkedAccount, type LinkedAccountDetails } from "./components/guest-linked-account";
 export { GuestSessionProvider, useGuestSession } from "./components/guest-session-provider";

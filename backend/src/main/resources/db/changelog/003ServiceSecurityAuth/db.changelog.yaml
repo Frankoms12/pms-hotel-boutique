@@ -23,3 +23,12 @@ databaseChangeLog:
   - include:
       file: 008-staff-auth-audit-attribution.yaml
       relativeToChangelogFile: true
+  - include:
+      file: 009-unified-password-login.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: 010-guest-registration.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: 011-guest-registration-request-quota.yaml
+      relativeToChangelogFile: true

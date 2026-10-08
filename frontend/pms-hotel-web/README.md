@@ -48,7 +48,7 @@ No agregar secretos ni tokens de sesión al frontend.
 ## Checkout público
 
 Inicio → catálogo → detalle → selección → datos del huésped → revisión final → pago → confirmación.
-Usar `npm run dev -- --port 3000` y abrir `http://localhost:3000`.
+Usar `npm run dev` y abrir `http://localhost:3001`.
 Seleccionar primero una habitación con fechas futuras. El borrador se conserva
 durante la navegación; recargar descarta carrito y datos personales. La vista
 de pago permite ahora una garantía y confirmación simuladas, sin cobros ni reservas reales.

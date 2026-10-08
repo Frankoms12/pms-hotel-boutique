@@ -73,7 +73,8 @@ export async function httpRequest<ResponseDto>(
 
     let statusError: unknown;
     if (response.status === 401) {
-      triggerUnauthorized();
+      // Cookie BFF sessions handle their own context's 401; no global logout signal.
+      if (options.withAuth !== false) triggerUnauthorized();
       statusError = new HttpUnauthorizedError(response.statusText, errorData);
     } else if (response.status === 403) {
       statusError = new HttpForbiddenError(response.statusText, errorData);

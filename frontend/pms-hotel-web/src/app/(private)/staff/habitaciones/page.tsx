@@ -1,13 +1,6 @@
-import { RoomBoard } from "@/modules/rooms";
+import { StaffRoomsWorkspace } from '../../staff-property-workspace';
 
-/**
- * Dev stub: propertyId/endpoint deben resolverse desde la sesion de Staff Auth
- * y el contrato confirmado por Backend. Mientras no exista esa composicion,
- * se inyectan via env solo en desarrollo (.env.development.local).
- */
+/** Staff composition resolves the property from the authorized session. */
 export default function RoomsPage() {
-  const propertyId = process.env.NEXT_PUBLIC_PROPERTY_ID;
-  const endpoint = "http://pms.test/rooms";
-
-  return <RoomBoard propertyId={propertyId} endpoint={endpoint} />;
+  return <StaffRoomsWorkspace />;
 }

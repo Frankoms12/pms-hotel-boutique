@@ -16,6 +16,10 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.yaml
 
 management:
+  # Email delivery is checked by the OTP adapter, not by hotel readiness probes.
+  health:
+    mail:
+      enabled: false
   endpoints:
     web:
       exposure:
@@ -47,6 +51,14 @@ pms:
     client-id: ${GOOGLE_CLIENT_ID:}
     client-secret: ${GOOGLE_CLIENT_SECRET:}
     redirect-uri: ${GOOGLE_REDIRECT_URI:}
+  email:
+    provider: ${PMS_EMAIL_PROVIDER:resend}
+  smtp:
+    host: ${PMS_SMTP_HOST:}
+    port: ${PMS_SMTP_PORT:}
+    username: ${PMS_SMTP_USERNAME:}
+    app-password: ${PMS_SMTP_APP_PASSWORD:}
+    from: ${PMS_SMTP_FROM:}
   resend:
     api-key: ${RESEND_API_KEY:}
     from-email: ${RESEND_FROM_EMAIL:}

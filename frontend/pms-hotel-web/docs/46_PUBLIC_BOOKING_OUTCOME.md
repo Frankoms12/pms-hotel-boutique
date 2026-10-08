@@ -1,5 +1,9 @@
 # Public 01 — Resultado de reserva: confirmación y error
 
+Integración real vigente: [submit J6](52_PUBLIC_BOOKING_J6_SUBMIT.md). En modo
+real se muestra confirmationCode y se conservan los UUIDs de Backend; las
+referencias simuladas descritas abajo corresponden al modo mock.
+
 Actualización de presentación: [textos finales para clientes](48_PUBLIC_BOOKING_CUSTOMER_COPY.md). Ticket, panel financiero y calendario usan redacción final; esta actualización no añade persistencia, correo ni integración Backend.
 
 ## Alcance

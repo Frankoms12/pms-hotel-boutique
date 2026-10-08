@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-verified-email-history-009
+      author: alan-bd1
+      changes:
+        - sql:
+            dbms: postgresql
+            splitStatements: false
+            sql: |
+              CREATE INDEX ix_guest_profiles_normalized_email ON guest_profiles(lower(btrim(email))) WHERE email IS NOT NULL;
+              ALTER TABLE guest_reservation_links ADD COLUMN link_source varchar(20) NOT NULL DEFAULT 'RESERVATION_OTP';
+              ALTER TABLE guest_reservation_links ALTER COLUMN challenge_id DROP NOT NULL;
+              ALTER TABLE guest_reservation_links ADD COLUMN email_verification_id uuid REFERENCES guest_email_verifications(id);
+              ALTER TABLE guest_reservation_links ADD CONSTRAINT ck_guest_link_evidence CHECK (
+                (link_source='RESERVATION_OTP' AND challenge_id IS NOT NULL AND email_verification_id IS NULL)
+                OR (link_source='VERIFIED_EMAIL' AND challenge_id IS NULL AND email_verification_id IS NOT NULL)
+              );
+              CREATE TRIGGER trg_guest_email_verifications_append_only
+                BEFORE UPDATE OR DELETE ON guest_email_verifications
+                FOR EACH ROW EXECUTE FUNCTION bd1_reject_guest_link_mutation();

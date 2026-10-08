@@ -5,7 +5,10 @@
  */
 
 export { ReservationCenter } from "./components/reservation-center";
+export { StaffNewReservation } from './components/staff-new-reservation';
 export { confirmDemoBooking } from './hooks/confirm-demo-booking';
+export { confirmPublicBooking } from './hooks/confirm-public-booking';
+export type { PublicBookingRequest, PublicBookingConfirmation, BookingConfirmation } from './model/public-booking';
 export type { DemoBookingRequest, DemoBookingConfirmation } from './model/demo-booking';
 export { ReservationDetail } from "./components/reservation-detail";
 export { WaitlistBoard } from "./components/waitlist-board";

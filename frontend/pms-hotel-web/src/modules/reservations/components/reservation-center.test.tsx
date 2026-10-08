@@ -108,6 +108,13 @@ function waitlistPreviewMockReturn() {
 }
 
 describe("ReservationCenter", () => {
+  it('opens the new reservation route only when creation is permitted, including an empty center', () => {
+    useReservationCenterMock.mockReturnValue({ data: { ...centerData(), reservations: [] }, error: null, isLoading: false, refetch: vi.fn() });
+    const view = render(<ReservationCenter propertyId="GT-HB-01" endpoint="http://pms.test/contract/reservations" canCreate />);
+    expect(screen.getByRole('link', { name: '+ Nueva reserva' })).toHaveAttribute('href', '/reservas/nueva');
+    view.rerender(<ReservationCenter propertyId="GT-HB-01" endpoint="http://pms.test/contract/reservations" canCreate={false} />);
+    expect(screen.queryByRole('link', { name: '+ Nueva reserva' })).not.toBeInTheDocument();
+  });
   it("does not query until composition supplies an authorized scope", () => {
     useReservationCenterMock.mockReturnValue({ data: undefined, error: null, isLoading: false, refetch: vi.fn() });
 

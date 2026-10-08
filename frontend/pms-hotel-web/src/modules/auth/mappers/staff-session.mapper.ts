@@ -13,6 +13,7 @@ const roleCodes = Object.keys(roleNames) as StaffRoleCode[];
 const permissionCodes = [
   "MULTI_PROPERTY_READ", "STAFF_MANAGE", "RESERVATION_MANAGE", "FOLIO_PAYMENT_OPERATE",
   "PAYMENT_REFUND_VOID", "OPERATIONS_MANAGE", "COMMERCIAL_MANAGE", "AUDIT_READ", "NIGHT_AUDIT_RUN",
+  "SERVICE_REQUEST_INTAKE",
 ] as const;
 
 function mapMembership(value: unknown, propertyCode: string | null, active: boolean) {

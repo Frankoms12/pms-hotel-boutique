@@ -35,7 +35,7 @@ El contrato público de disponibilidad y las consultas de perfil existentes cont
 
 ## Prueba manual
 
-En `frontend/pms-hotel-web`, usar la configuración mock local y `npm run dev -- --port 3000`. Abrir `http://localhost:3000`, buscar fechas futuras, seleccionar habitación, revisar y «Continuar con mis datos».
+En `frontend/pms-hotel-web`, usar la configuración mock local y `npm run dev -- --port 3000`. Abrir `http://localhost:3001`, buscar fechas futuras, seleccionar habitación, revisar y «Continuar con mis datos».
 
 1. Enviar vacío: aparecen errores y el foco vuelve al nombre. Corregir correo/teléfono y observar la validación.
 2. Completar datos, documento obligatorio y solicitudes; comprobar contador y resumen. En mock se conserva el selector USD/GTQ; en real se muestran los importes GTQ del Backend.

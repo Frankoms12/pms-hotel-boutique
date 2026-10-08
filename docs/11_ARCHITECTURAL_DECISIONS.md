@@ -374,3 +374,24 @@ Guest se separan de Staff y modelan identidades externas por proveedor y `sub`.
 **Consecuencias:** Los tokens Guest no llegan a JavaScript. La vinculación
 histórica exige OTP y una consulta de Reservations; no se inventa persistencia
 de reservas antes de que su módulo exista.
+
+### DEC-B-004 / entorno local — Addendum AUTH-UNIFIED-01
+
+**Fecha:** 2026-10-06. **Status:** APPROVED por solicitud explícita de Alan.
+
+Login tradicional universal = correo electrónico + contraseña en `/acceso`.
+Google = Guest exclusivamente. Invitado = journey público sin autenticar.
+Guest Auth != Staff Auth: no identidad central ni fusión de tablas. Fachada
+BFF/Backend valida ambos contextos antes de revelar opciones; dos credenciales
+válidas requieren selector y revalidación. Staff username permanece interno;
+Guest credential separado de GuestProfile, reutiliza GuestAccount y sus sesiones.
+Guest provisionado con credential puede acceder por password; registro público,
+recuperación/cambio de contraseña y MFA no se implementan en este incremento.
+Esta decisión sustituye la exclusividad Google del login Guest anterior.
+
+Puerto canónico versionado http://localhost:3001. Compose raíz publica únicamente
+127.0.0.1:3001:3000; Backend/PostgreSQL internos. Override debug explícito para
+Swagger 8081. Esta decisión sustituye el addendum 2026-10-05 de publicación
+Backend normal y puertos variables. dev/start también fijan 3001 sin fallback.
+QA integrado = Docker Compose raíz, mismo commit; conflicto de puerto falla.
+[Contrato y QA](../backend/docs/44_UNIFIED_LOGIN_CONTRACT_QA.md).

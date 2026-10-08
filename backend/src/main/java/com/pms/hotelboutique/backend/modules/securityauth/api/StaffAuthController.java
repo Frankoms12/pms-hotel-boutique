@@ -38,18 +38,18 @@ public class StaffAuthController {
 
     @PostMapping("/sessions")
     @ApiResponse(responseCode = "201", description = "Sesión Staff creada; tokens solo para BFF.", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StaffAuthResponse.class)))
-    @ApiResponse(responseCode = "400", description = "Validación MVC: JSON o credenciales de entrada inválidos; un redispatch a /error protegido puede producir 401 en el servidor HTTP.", content = @Content)
+    @ApiResponse(responseCode = "400", description = "JSON o credenciales de entrada inválidos; error 400 sanitizado sin datos rechazados.", content = @Content)
     @ApiResponse(responseCode = "401", description = "Credenciales/identidad/autorización Staff inválidas; error genérico. Filtro o redispatch a /error protegido pueden responder 401 sin cuerpo de aplicación.", content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
     @Operation(summary = "Iniciar sesión", deprecated = true, description = "Alias compatible; preferir POST /api/v1/staff-auth/login. BFF-only; conserva tokens solo en cookies HttpOnly.")
     public ResponseEntity<StaffAuthResponse> login(@Valid @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     required = true, content = @Content(mediaType = "application/json",
                     schema = @Schema(implementation = StaffLoginRequest.class))) @RequestBody StaffLoginRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(staffAuthService.login(request.username(), request.password())));
+        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(staffAuthService.login(request.email(), request.password())));
     }
 
     @PostMapping("/login")
     @ApiResponse(responseCode = "201", description = "Sesión Staff creada; tokens solo para BFF.", content = @Content(mediaType = "application/json", schema = @Schema(implementation = StaffAuthResponse.class)))
-    @ApiResponse(responseCode = "400", description = "Validación MVC: JSON o credenciales de entrada inválidos; un redispatch a /error protegido puede producir 401 en el servidor HTTP.", content = @Content)
+    @ApiResponse(responseCode = "400", description = "JSON o credenciales de entrada inválidos; error 400 sanitizado sin datos rechazados.", content = @Content)
     @ApiResponse(responseCode = "401", description = "Credenciales/identidad/autorización Staff inválidas; error genérico. Filtro o redispatch a /error protegido pueden responder 401 sin cuerpo de aplicación.", content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class)))
     @Operation(summary = "Iniciar sesión", description = "BFF-only; conserva tokens solo en cookies HttpOnly.")
     public ResponseEntity<StaffAuthResponse> loginExplicit(@Valid @io.swagger.v3.oas.annotations.parameters.RequestBody(

@@ -161,18 +161,18 @@ class ExplicitAuthEndpointsIntegrationTests {
     @Test
     void staffLoginAliasesHaveEquivalentValidationAndAuthenticationFailures() throws Exception {
         var user = staff();
-        for (String body : List.of("{}", "{", json.writeValueAsString(Map.of("username", "", "password", "")),
-                json.writeValueAsString(Map.of("username", "x".repeat(81), "password", PASSWORD)))) {
+        for (String body : List.of("{}", "{", json.writeValueAsString(Map.of("email", "", "password", "")),
+                json.writeValueAsString(Map.of("email", "x".repeat(321), "password", PASSWORD)))) {
             for (String route : List.of("/sessions", "/login")) {
                 mvc.perform(post(STAFF + route).contentType(MediaType.APPLICATION_JSON).content(body))
                         .andExpect(status().isBadRequest());
             }
         }
-        for (String username : List.of(user.username(), "absent-" + UUID.randomUUID())) {
+        for (String username : List.of(user.username() + "@example.test", "a" + UUID.randomUUID() + "@example.test")) {
             JsonNode legacy = null;
             for (String route : List.of("/sessions", "/login")) {
                 var problem = json.readTree(mvc.perform(post(STAFF + route).contentType(MediaType.APPLICATION_JSON)
-                        .content(json.writeValueAsString(Map.of("username", username, "password", "wrong"))))
+                        .content(json.writeValueAsString(Map.of("email", username, "password", "wrong"))))
                         .andExpect(status().isUnauthorized()).andExpect(content().contentTypeCompatibleWith("application/problem+json"))
                         .andReturn().getResponse().getContentAsString());
                 assertEquals(401, problem.path("status").asInt());
@@ -254,7 +254,7 @@ class ExplicitAuthEndpointsIntegrationTests {
 
     private StaffFixture staff() {
         var id = UUID.randomUUID();
-        var username = "alias-" + id;
+        var username = "a" + id;
         new TransactionTemplate(transactions).executeWithoutResult(tx -> {
             users.saveAndFlush(new StaffUser(id, username, username + "@example.test", passwords.encode(PASSWORD), "SUPER_ADMIN", Instant.now()));
             authorization.ensureSuperAdminMembership(id, ORGANIZATION);
@@ -266,7 +266,7 @@ class ExplicitAuthEndpointsIntegrationTests {
         return tokenResponse(post(STAFF + route).contentType(MediaType.APPLICATION_JSON).content(credentials(user)), 201);
     }
 
-    private String credentials(StaffFixture user) { return json.writeValueAsString(Map.of("username", user.username(), "password", PASSWORD)); }
+    private String credentials(StaffFixture user) { return json.writeValueAsString(Map.of("email", user.username() + "@example.test", "password", PASSWORD)); }
 
     private VerifiedGoogleIdentity guestIdentity() {
         String id = UUID.randomUUID().toString();

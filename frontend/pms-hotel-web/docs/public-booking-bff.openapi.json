@@ -1,0 +1,410 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Web public booking BFF",
+    "version": "1.0.0",
+    "description": "Same-origin Web proxy of the existing Backend J6 contract. Backend OpenAPI is unchanged."
+  },
+  "paths": {
+    "/api/v1/public/bookings": {
+      "post": {
+        "operationId": "submitPublicBooking",
+        "security": [],
+        "description": "No Guest or Staff session required. Forwards payload and Idempotency-Key verbatim, without credentials. Both creation and replay return 201. No automatic retries. A lost or unreadable upstream response is 502 with unknown outcome.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Opaque key preserved verbatim; no control characters or blank values.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicBookingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Creation or idempotent replay of the original persisted booking.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicBookingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_REQUEST or INVALID_DATE_RANGE.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicBookingError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PROPERTY_NOT_FOUND.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicBookingError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "NO_AVAILABILITY, PRICE_CHANGED or IDEMPOTENCY_KEY_REUSED.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicBookingError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "PAYMENT_DECLINED.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicBookingError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "BOOKING_FAILED; no partial local booking writes.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicBookingError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "UPSTREAM_RESULT_UNKNOWN; retry the identical payload and key before revalidation.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "no-store"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicBookingError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "PublicBookingRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "propertyId",
+          "arrival",
+          "departure",
+          "currency",
+          "clientTotalMinor",
+          "stays",
+          "bookingGuest",
+          "paymentMode"
+        ],
+        "properties": {
+          "propertyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "arrival": {
+            "type": "string",
+            "format": "date"
+          },
+          "departure": {
+            "type": "string",
+            "format": "date"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "GTQ"
+            ]
+          },
+          "clientTotalMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "stays": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/PublicBookingStayRequest"
+            }
+          },
+          "bookingGuest": {
+            "$ref": "#/components/schemas/PublicBookingGuestRequest"
+          },
+          "paymentMode": {
+            "type": "string",
+            "enum": [
+              "SIMULATED_CARD"
+            ]
+          }
+        }
+      },
+      "PublicBookingStayRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "roomTypeId",
+          "ratePlanId",
+          "quantity"
+        ],
+        "properties": {
+          "roomTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ratePlanId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "PublicBookingGuestRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "firstName",
+          "lastName",
+          "email"
+        ],
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "minLength": 1,
+            "maxLength": 320
+          }
+        }
+      },
+      "PublicBookingResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reservationId",
+          "confirmationCode",
+          "status",
+          "currency",
+          "totalMinor",
+          "payment",
+          "stays"
+        ],
+        "properties": {
+          "reservationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "confirmationCode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "CONFIRMED"
+            ]
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "GTQ"
+            ]
+          },
+          "totalMinor": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "payment": {
+            "$ref": "#/components/schemas/PublicBookingPaymentResponse"
+          },
+          "stays": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/PublicBookingStayResponse"
+            }
+          }
+        }
+      },
+      "PublicBookingPaymentResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "provider",
+          "status",
+          "reference"
+        ],
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "SIMULATED"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "APPROVED"
+            ]
+          },
+          "reference": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "PublicBookingStayResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reservationStayId",
+          "roomTypeId",
+          "roomId",
+          "arrival",
+          "departure"
+        ],
+        "properties": {
+          "reservationStayId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roomTypeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "roomId": {
+            "type": "null"
+          },
+          "arrival": {
+            "type": "string",
+            "format": "date"
+          },
+          "departure": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "PublicBookingError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

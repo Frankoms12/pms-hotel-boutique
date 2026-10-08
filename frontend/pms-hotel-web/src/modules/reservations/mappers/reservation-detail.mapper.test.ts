@@ -44,6 +44,13 @@ function detailDto(overrides: Partial<ReservationDetailDto> = {}): ReservationDe
 }
 
 describe("mapReservationDetail", () => {
+  it('accepts a stay with a room type but no assigned physical room', () => {
+    const detail = mapReservationDetail(detailDto({ stays: [stayDto({ room_id: null, room_label: null })] }));
+    expect(detail.stays[0]).toMatchObject({ roomId: null, roomLabel: null, roomType: 'Deluxe King' });
+  });
+  it('rejects an inconsistent physical room assignment', () => {
+    expect(() => mapReservationDetail(detailDto({ stays: [stayDto({ room_id: null })] }))).toThrow('INCONSISTENT_ROOM_ASSIGNMENT');
+  });
   it("maps a complete detail to Domain data", () => {
     const detail = mapReservationDetail(detailDto());
 

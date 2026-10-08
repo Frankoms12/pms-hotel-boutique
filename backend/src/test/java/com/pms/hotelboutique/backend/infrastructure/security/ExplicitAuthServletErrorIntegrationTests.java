@@ -20,19 +20,19 @@ class ExplicitAuthServletErrorIntegrationTests {
     @Autowired ObjectMapper json;
 
     @Test
-    void loginAliasPreservesLegacyErrorsIncludingProtectedServletErrorDispatch() throws Exception {
+    void loginAliasesReturnSanitizedInputErrorsWithoutServletRedispatch() throws Exception {
         var client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
-        for (String body : List.of("{}", "{", "{\"username\":\"\",\"password\":\"\"}")) {
+        for (String body : List.of("{}", "{", "{\"email\":\"\",\"password\":\"\"}")) {
             for (String path : List.of("/sessions", "/login")) {
                 var response = login(client, path, body);
-                // MockMvc sees MVC's 400; the real servlet redispatches to the protected /error.
-                assertEquals(401, response.statusCode());
-                assertEquals("", response.body());
+                // Auth input handler never logs/returns rejected credential values.
+                assertEquals(400, response.statusCode());
+                assertEquals("Invalid authentication input", json.readTree(response.body()).path("title").asText());
                 assertTrue(response.headers().firstValue("Set-Cookie").isEmpty());
             }
         }
-        var legacy = login(client, "/sessions", "{\"username\":\"absent-servlet-fixture\",\"password\":\"invalid\"}");
-        var current = login(client, "/login", "{\"username\":\"absent-servlet-fixture\",\"password\":\"invalid\"}");
+        var legacy = login(client, "/sessions", "{\"email\":\"absent-servlet-fixture@example.test\",\"password\":\"invalid\"}");
+        var current = login(client, "/login", "{\"email\":\"absent-servlet-fixture@example.test\",\"password\":\"invalid\"}");
         assertEquals(401, legacy.statusCode());
         assertEquals(legacy.statusCode(), current.statusCode());
         assertEquals(legacy.headers().firstValue("Content-Type"), current.headers().firstValue("Content-Type"));

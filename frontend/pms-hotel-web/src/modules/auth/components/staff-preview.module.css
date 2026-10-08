@@ -1,0 +1,9 @@
+.notice {
+  padding: 12px 20px;
+  background: #e3e8e3;
+  border-bottom: 1px solid #ced7ce;
+  color: #2a362b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.notice strong { margin-right: 8px; }

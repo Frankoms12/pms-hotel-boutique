@@ -42,7 +42,7 @@ El mock vive en memoria: cerrar o recargar la aplicación reinicia la demostraci
 
 ## Prueba manual
 
-En `frontend/pms-hotel-web`, configuración mock habilitada, ejecutar `npm run dev -- --port 3000`. Abrir `http://localhost:3000` → Mis reservas → Continuar con Google → Continuar retorno al PMS → Ir a Mis reservas.
+En `frontend/pms-hotel-web`, configuración mock habilitada, ejecutar `npm run dev -- --port 3000`. Abrir `http://localhost:3001` → Mis reservas → Continuar con Google → Continuar retorno al PMS → Ir a Mis reservas.
 
 1. Comprobar que el historial está vacío y la búsqueda pública sigue accesible.
 2. Vincular la referencia `HB-2026-10420` usando `12345678`; revisar dos estadías y su detalle.

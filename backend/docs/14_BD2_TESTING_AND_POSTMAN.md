@@ -83,12 +83,12 @@ Room y sin stays consumidores/OOO en esas noches, ATS=1. OOS no resta inventario
 ## Secuencia Postman
 
 Crear un environment privado y completar `baseUrl` (`http://127.0.0.1:18080`),
-`staffUsername` y `staffPassword` con el usuario local. Mantener credenciales y
+`staffEmail` y `staffPassword` con el usuario local. Mantener credenciales y
 tokens como valores privados; no exportar ni compartir un environment poblado.
 La colección no contiene contraseñas ni JWT reales.
 
 1. **Login Staff:** `POST {{baseUrl}}/api/v1/staff-auth/sessions`, body JSON
-   `{"username":"{{staffUsername}}","password":"{{staffPassword}}"}`.
+   `{"email":"{{staffEmail}}","password":"{{staffPassword}}"}`.
    Esperar 201; el script guarda `accessToken` en `staffAccessToken` del environment.
 2. **Sesión Staff:** esperar 200 y revisar `permissions` y `memberships`.
    Usar una propiedad autorizada como `propertyId`.
@@ -128,7 +128,7 @@ para rutas que lo evadan.
 ## Properties: contrato aprobado BD2-006B
 
 Importar también `backend/postman/BD2-Properties.postman_collection.json` y usar
-el mismo environment privado (`baseUrl`, `staffUsername`, `staffPassword`).
+el mismo environment privado (`baseUrl`, `staffEmail`, `staffPassword`).
 Ejecutar en una base de pruebas con SUPER_ADMIN y los permisos `STAFF_MANAGE`,
 `MULTI_PROPERTY_READ` y `COMMERCIAL_MANAGE`. La colección genera un código único,
 crea una propiedad y guarda su ID; no requiere insertar Properties manualmente.

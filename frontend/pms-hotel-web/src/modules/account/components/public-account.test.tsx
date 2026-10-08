@@ -1,3 +1,5 @@
+import {activateGuestFixture} from '@/test/guest-session-fixture';
+import {useQueryClient} from '@tanstack/react-query';
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -19,8 +21,8 @@ beforeEach(() => { resetAccountFixtures(); vi.stubEnv("NEXT_PUBLIC_USE_MOCK_API"
 afterEach(() => { cleanup(); vi.unstubAllEnvs(); });
 
 function DemoSession({ email }: { email: string }) {
-  const session = useGuestSession();
-  return <><button onClick={() => void session.signIn({ method: "EMAIL", email })}>Entrar</button><output aria-label="Correo de acceso">{session.account?.email}</output></>;
+  const session = useGuestSession();const client=useQueryClient();
+  return <><button onClick={() => void activateGuestFixture({ method: "EMAIL", email },client)}>Entrar</button><output aria-label="Correo de acceso">{session.account?.email}</output></>;
 }
 async function setup(page: Page, email = "demo@example.com") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } } });

@@ -4,11 +4,11 @@
 .header h1 { margin: var(--space-2) 0; font-size: var(--font-size-h1); line-height: var(--line-height-h1); }
 .header p { color: var(--color-text-secondary); margin: 0; }
 .eyebrow { color: var(--color-text-brand) !important; font-size: var(--font-size-label-md); font-weight: var(--font-weight-semibold); }
-.content { display: grid; gap: var(--space-6); grid-template-columns: minmax(300px, 0.8fr) minmax(0, 1.4fr); }
+.content { display: grid; align-items: start; gap: var(--space-6); grid-template-columns: minmax(300px, 0.8fr) minmax(0, 1.4fr); }
 .listPanel { background: var(--color-surface-card); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); padding: var(--space-5); }
 .panelHeader { align-items: flex-start; display: flex; gap: var(--space-3); justify-content: space-between; margin-bottom: var(--space-4); }
 .panelHeader .eyebrow { margin-bottom: var(--space-2); }
-.count { color: var(--color-text-secondary); font-size: var(--font-size-caption); white-space: nowrap; }
+.count { color: var(--color-text-secondary); font-size: var(--font-size-caption); }
 .sectionTitle { font-size: var(--font-size-h3); line-height: var(--line-height-h3); margin: 0 0 var(--space-4); }
 .list { display: grid; gap: var(--space-3); list-style: none; margin: 0; padding: 0; }
 .roomButton { align-items: center; background: var(--color-surface-card); border: 1px solid var(--color-border-default); border-radius: var(--radius-sm); color: var(--color-text-primary); cursor: pointer; display: flex; font: inherit; justify-content: space-between; min-height: 56px; padding: var(--space-4); text-align: left; width: 100%; }
@@ -49,3 +49,27 @@
 .periodGrid { display: grid; gap: var(--space-3); grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: var(--space-3); }
 .periodGrid .reasonField { margin-top: 0; }
 @media (max-width: 720px) { .page { padding: var(--space-6) var(--space-4); } .content, .detailGrid { grid-template-columns: 1fr; } .summaryGrid { grid-template-columns: 1fr; } }
+.filters { display: grid; gap: 12px; margin-bottom: 20px; font-size: 12px; }
+.filters label { display: grid; gap: 6px; }.filters :is(input,select,button) { border: 1px solid #dce3d9; padding: 10px; min-height: 44px; border-radius: 10px; background: white; color: #2a362b; font: inherit; width: 100%; }.filters button { cursor: pointer; }
+.datePanel { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; padding: 20px; border: 1px solid #dce3d9; border-radius: 20px; background: #fff; }
+.datePanel > div { flex: 1; min-width: 220px; }.datePanel h2 { margin-bottom: 0; }.datePanel .note { margin-top: 6px; }
+.datePanel label, .boardFilters label { display: grid; gap: 7px; color: #465347; font-size: 12px; font-weight: 500; }
+.datePanel input, .boardFilters :is(input,select) { width: 100%; min-width: 0; min-height: 44px; border: 1px solid #dce3d9; border-radius: 12px; padding: 10px 12px; background: #fff; color: #2a362b; font: inherit; }
+.datePanel input:focus-visible, .boardFilters :is(input,select):focus-visible { outline: 3px solid var(--color-brand-accent); outline-offset: 2px; }
+.metrics { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin-top: 20px; }
+.metrics button { display: grid; gap: 6px; text-align: left; min-height: 98px; padding: 18px; color: #2a362b; background: white; border: 1px solid #dce3d9; border-radius: 18px; cursor: pointer; font: inherit; }
+.metrics button[aria-pressed="true"], .metrics button:hover:not(:disabled) { border-color: #5a6b5d; background: #e3e8e3; }
+.metrics strong { font-size: 28px; font-family: var(--font-family-display); font-weight: 500; }.metrics span { font-size: 12px; }
+.page button:disabled { cursor: default; opacity: .55; }
+.notice { margin: 18px 0; padding: 16px 20px; background: #e9eee8; border: 1px solid #dce3d9; border-radius: 16px; color: #39483b; font-size: 13px; overflow-wrap: anywhere; }
+.notice p { margin: 6px 0; }.notice ul { margin: 8px 0 0; padding-left: 18px; }.notice a { color: #39483b; text-decoration: underline; }
+.boardFilters { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; align-items: end; margin: 24px 0; }
+.boardFilters .actionButton { min-height: 44px; border-radius: 12px; }
+.roomBadges { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; margin-left: 10px; }
+.roomButton { gap: 6px; }.roomButton > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.occupancyCard { grid-column: 1 / -1; background: #f4f6f3; border: 1px solid #dce3d9; border-radius: 14px; padding: 18px; }
+.occupancyCard h3 { font-size: 14px; margin: 0 0 12px; }.staySummary { margin-top: 16px; border-top: 1px solid #dce3d9; padding-top: 14px; overflow-wrap: anywhere; }.staySummary p { font-size: 13px; color: #616b63; margin: 7px 0; }
+.reservationLink { display: inline-block; margin-top: 6px; color: #405644; font-size: 13px; text-underline-offset: 4px; text-decoration: underline; }
+@media (max-width: 960px) { .content { grid-template-columns: 1fr; }.roomBadges { flex-direction: row; flex-wrap: wrap; justify-content: flex-end; } }
+@media (max-width: 600px) { .metrics, .boardFilters { grid-template-columns: repeat(2,minmax(0,1fr)); }.metrics button { padding: 14px; }.datePanel label { flex: 1 1 100%; }.datePanel input { max-width: 100%; }.listPanel,.detail { padding: 16px; }.roomBadges { flex-direction: column; }.panelHeader { flex-wrap: wrap; }.boardFilters label:first-child { grid-column: 1 / -1; } }
+@media (prefers-reduced-motion: no-preference) { .roomButton,.metrics button,.actionButton { transition: background .18s, border-color .18s; } }

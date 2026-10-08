@@ -5,12 +5,12 @@ import { getPublicEnvironment } from '@/lib/env';
 import { getPublicAvailability } from '../service/public-availability-query';
 import type { AvailabilitySearchParams } from "../model/availability-option";
 
-export function usePublicAvailability(params: AvailabilitySearchParams | undefined) {
+export function usePublicAvailability(params: AvailabilitySearchParams | undefined, suspended = false) {
   const mock = getPublicEnvironment().useMockApi;
   const propertyId = params?.propertyId ?? (mock ? undefined : process.env.NEXT_PUBLIC_PROPERTY_ID?.trim());
   return useQuery({
     queryKey: ["public-availability", mock, { ...params, propertyId }],
-    enabled: Boolean(params),
+    enabled: Boolean(params) && !suspended,
     retry: false,
     staleTime: 0,
     refetchOnWindowFocus: false,

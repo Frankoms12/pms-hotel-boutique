@@ -1,72 +1,37 @@
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import type { UserRole, UserSession } from "@/modules/auth";
+import { NextRequest, NextResponse } from 'next/server';
+import { applyStaffCookies, backendStaffRequest, type StaffTokens } from '@/lib/bff/staff-auth';
+import { applyGuestCookies } from '@/lib/bff/guest-auth';
+import { passwordExceedsByteLimit } from '@/lib/login-input';
+import { loginCredentials } from '@/lib/bff/login-credentials';
 
-const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
-  RECEPTION: [
-    "folio:view", "folio:manage", "payments:authorize", "payments:capture",
-    "reservations:view", "reservations:manage", "guests:view"
-  ],
-  MANAGER: [
-    "folio:view", "folio:manage", "payments:manage", "revenue:view",
-    "rates:manage", "inventory:manage", "inventory:overbooking:manage", "audit:view"
-  ],
-  OPERATIONS: [
-    "housekeeping:view", "housekeeping:manage", "maintenance:view", "valet:manage"
-  ],
-  COMPLIANCE: [
-    "night-audit:view", "night-audit:manage", "audit:view", "reports:view"
-  ],
-  ADMIN: [
-    "*"
-  ],
-  GUEST: [
-    "guest:stay:view", "guest:services:order", "guest:folio:view"
-  ],
-};
-
-export async function POST(request: Request) {
+const failure = (status: number) => NextResponse.json({ error: status === 503 ? 'Authentication unavailable' : 'Invalid credentials' }, { status, headers: { 'Cache-Control': 'no-store' } });
+export async function POST(request: NextRequest) {
+  const origin = request.headers.get('origin');
+  // Next's request origin can contain the container's internal hostname/port.
+  const publicOrigin = new URL(process.env.PMS_WEB_PUBLIC_URL ?? 'http://localhost:3001').origin;
+  if (origin && origin !== publicOrigin) return failure(403);
+  let body: unknown;
+  try { body = await request.json(); } catch { return failure(400); }
+  if (body && typeof body === "object" && passwordExceedsByteLimit((body as Record<string,unknown>).password)) return failure(401);
+  const credentials = loginCredentials(body);
+  if (!credentials) return failure(400);
   try {
-    const body = await request.json();
-    const { email, role = "RECEPTION", propertyId = "prop_boutique_01" } = body;
-
-    if (!email || typeof email !== "string") {
-      return NextResponse.json(
-        { error: "Email es requerido para iniciar sesión" },
-        { status: 400 }
-      );
-    }
-
-    const assignedRole = (role in ROLE_PERMISSIONS ? role : "RECEPTION") as UserRole;
-    const permissions = ROLE_PERMISSIONS[assignedRole] || [];
-    const token = `jwt_session_${Date.now()}_${assignedRole.toLowerCase()}`;
-    const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(); // 8 hours
-
-    const session: UserSession = {
-      userId: `usr_${assignedRole.toLowerCase()}_${Date.now()}`,
-      email,
-      name: email.split("@")[0] || "Staff Member",
-      role: assignedRole,
-      propertyId,
-      permissions,
-      token,
-      expiresAt,
-    };
-
-    const cookieStore = await cookies();
-    cookieStore.set("pms_session", JSON.stringify(session), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 8 * 60 * 60, // 8 hours
+    const backend = await backendStaffRequest('/api/v1/auth/sessions', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(credentials),
     });
-
-    return NextResponse.json({ session });
-  } catch {
-    return NextResponse.json(
-      { error: "Error al procesar autenticación" },
-      { status: 500 }
-    );
-  }
+    if (!backend.ok) return failure(backend.status >= 500 ? 503 : 401);
+    const result = await backend.json() as Partial<StaffTokens> & { context?: string; contexts?: string[] };
+    if (backend.status === 200 && result.contexts?.length === 2 && result.contexts.includes('STAFF') && result.contexts.includes('GUEST')) {
+      return NextResponse.json({ authenticated: false, contexts: ['STAFF', 'GUEST'] }, { headers: { 'Cache-Control': 'no-store' } });
+    }
+    if (backend.status !== 201 || (result.context !== 'STAFF' && result.context !== 'GUEST')
+      || typeof result.accessToken !== 'string' || !result.accessToken
+      || typeof result.refreshToken !== 'string' || !result.refreshToken
+      || typeof result.accessTokenExpiresInSeconds !== 'number' || result.accessTokenExpiresInSeconds <= 0) return failure(503);
+    const response = NextResponse.json({ authenticated: true, context: result.context }, { status: 201, headers: { 'Cache-Control': 'no-store' } });
+    const tokens = result as StaffTokens;
+    if (result.context === 'STAFF') applyStaffCookies(response, tokens);
+    else applyGuestCookies(response, tokens);
+    return response;
+  } catch { return failure(503); }
 }

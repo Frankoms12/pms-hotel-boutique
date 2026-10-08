@@ -44,6 +44,20 @@ function waitlistReservation(): ReservationListItem {
 }
 
 describe("ReservationList", () => {
+  it('combines accent-insensitive guest search with inclusive arrival dates and clears filters', () => {
+    render(<ReservationList reservations={[reservation(), waitlistReservation()]} />);
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'maria lopez' } });
+    fireEvent.change(screen.getByLabelText('Llegada desde'), { target: { value: '2026-08-28' } });
+    fireEvent.change(screen.getByLabelText('Llegada hasta'), { target: { value: '2026-08-28' } });
+    expect(screen.getByRole('link', { name: 'HB-2026-08421' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'WAIT-0007' })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Llegada hasta'), { target: { value: '2026-08-27' } });
+    expect(screen.getByRole('alert')).toHaveTextContent('posterior');
+    expect(screen.queryByRole('link', { name: 'HB-2026-08421' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Limpiar filtros' }));
+    expect(screen.getByRole('link', { name: 'WAIT-0007' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Llegada desde')).toHaveValue('');
+  });
   it("renders table headers and the reservation summary cells", () => {
     render(<ReservationList reservations={[reservation(), waitlistReservation()]} />);
 
@@ -90,6 +104,7 @@ describe("ReservationList", () => {
 
     expect(screen.getByRole("link", { name: "HB-2026-08421" })).toHaveAttribute("href", "/reservas/HB-2026-08421");
     expect(screen.getByRole("link", { name: "WAIT-0007" })).toHaveAttribute("href", "/reservas/WAIT-0007");
+    expect(screen.getByRole("link", { name: "Ver detalle de HB-2026-08421" })).toHaveAttribute("href", "/reservas/HB-2026-08421");
   });
 
   it("filters rows by the search query", () => {
@@ -116,6 +131,9 @@ describe("ReservationList", () => {
 
     expect(screen.getByText("WAIT-0007")).toBeInTheDocument();
     expect(screen.queryByText("HB-2026-08421")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("1 reserva");
+    fireEvent.click(screen.getByRole("button", { name: "Limpiar filtros" }));
+    expect(screen.getByRole("status")).toHaveTextContent("2 reservas");
   });
 
   it("paginates a list larger than one page", () => {

@@ -16,6 +16,8 @@ export interface ModalProps {
   onClose: () => void;
   /** Elemento que recibe el foco al abrir; por defecto el primer elemento enfocable. */
   initialFocusRef?: RefObject<HTMLElement | null>;
+  /** Optional local layout, preserving the default appearance of other dialogs. */
+  className?: string;
 }
 
 const FOCUSABLE_SELECTOR = [
@@ -31,7 +33,7 @@ const FOCUSABLE_SELECTOR = [
  * Diálogo modal genérico sin reglas de dominio. Gestiona foco inicial, trampa de
  * foco, cierre por ESC y por backdrop. Los módulos lo consumen vía `@/shared/components`.
  */
-export function Modal({ title, children, footer, busy = false, onClose, initialFocusRef }: Readonly<ModalProps>) {
+export function Modal({ title, children, footer, busy = false, onClose, initialFocusRef, className = '' }: Readonly<ModalProps>) {
   const titleId = `modal-${useId()}`;
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -88,7 +90,7 @@ export function Modal({ title, children, footer, busy = false, onClose, initialF
         }
       }}
     >
-      <div ref={dialogRef} className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+      <div ref={dialogRef} className={`${styles.dialog} ${className}`.trim()} role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <header className={styles.header}>
           <h2 id={titleId}>{title}</h2>
         </header>
